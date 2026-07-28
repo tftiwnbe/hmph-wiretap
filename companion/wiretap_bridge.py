@@ -156,6 +156,10 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
         s = {"surface": sname}
         if "pollution" in surf:
             emit("pollution", s, surf["pollution"])
+        for source, total in _d(surf.get("pollution_produced_total")).items():
+            emit("pollution_produced_total", {**s, "source": source}, total)
+        for source, total in _d(surf.get("pollution_absorbed_total")).items():
+            emit("pollution_absorbed_total", {**s, "source": source}, total)
 
         power = _d(surf.get("power"))
         totals = _d(power.get("totals"))
@@ -219,6 +223,16 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
                 ):
                     if key in _d(v):
                         emit(metric, ps, v[key])
+        for sname, production in _d(force.get("production")).items():
+            ps = {"force": fname, "surface": sname}
+            for item, total in _d(production.get("items_produced_total")).items():
+                emit("item_produced_total", {**ps, "item": item}, total)
+            for item, total in _d(production.get("items_consumed_total")).items():
+                emit("item_consumed_total", {**ps, "item": item}, total)
+            for fluid, total in _d(production.get("fluids_produced_total")).items():
+                emit("fluid_produced_total", {**ps, "fluid": fluid}, total)
+            for fluid, total in _d(production.get("fluids_consumed_total")).items():
+                emit("fluid_consumed_total", {**ps, "fluid": fluid}, total)
 
     return "\n".join(out) + "\n"
 

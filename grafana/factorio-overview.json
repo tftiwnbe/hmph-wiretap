@@ -1,0 +1,63 @@
+{
+  "uid": "factorio-overview",
+  "title": "Factorio overview",
+  "tags": ["factorio"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Power generation and draw",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "watt"}, "overrides": []},
+      "targets": [
+        {"refId": "A", "expr": "sum by (surface) (factorio_power_production_watts)", "legendFormat": "{{surface}} production"},
+        {"refId": "B", "expr": "sum by (surface) (factorio_power_consumption_watts)", "legendFormat": "{{surface}} consumption"}
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Pollution",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "factorio_pollution", "legendFormat": "{{surface}}"}]
+    },
+    {
+      "id": 3,
+      "type": "gauge",
+      "title": "Accumulator charge",
+      "gridPos": {"x": 0, "y": 8, "w": 6, "h": 6},
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "100 * sum(factorio_accumulator_charge_joules) / sum(factorio_accumulator_capacity_joules)"}]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Players online",
+      "gridPos": {"x": 6, "y": 8, "w": 6, "h": 6},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "factorio_players_online"}]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Science consumption",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 6},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "sum by (item) (factorio_science_pack_consumption_per_minute / 60)", "legendFormat": "{{item}}"}]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Core item production (10m rate)",
+      "gridPos": {"x": 0, "y": 14, "w": 24, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "targets": [{"refId": "A", "expr": "sum by (item) (rate(factorio_item_produced_total{item=~\"iron-plate|copper-plate|steel-plate|electronic-circuit\"}[10m]))", "legendFormat": "{{item}}"}]
+    }
+  ]
+}
