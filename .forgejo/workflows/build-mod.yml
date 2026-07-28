@@ -1,0 +1,114 @@
+name: Build Factorio mod
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build archive
+        run: |
+          ./scripts/package.sh
+          sha256sum dist/hmph-wiretap_*.zip > dist/SHA256SUMS
+
+      - name: Verify archive layout
+        run: |
+          version="$(python3 -c "import json; print(json.load(open('mod/hmph-wiretap/info.json'))['version'])")"
+          unzip -t "dist/hmph-wiretap_${version}.zip"
+          unzip -Z1 "dist/hmph-wiretap_${version}.zip" | grep -qx "hmph-wiretap_${version}/info.json"
+
+      - name: Upload client mod
+        uses: actions/upload-artifact@v3
+        with:
+          name: hmph-wiretap-${{ github.sha }}
+          path: |
+            dist/hmph-wiretap_*.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
+
+  publish:
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/v') && secrets.FACTORIO_MOD_UPLOAD_API_KEY != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and verify release archive
+        run: |
+          ./scripts/package.sh
+          version="$(python3 -c "import json; print(json.load(open('mod/hmph-wiretap/info.json'))['version'])")"
+          test "${GITHUB_REF_NAME}" = "v${version}"
+
+      - name: Upload release to Factorio Mod Portal
+        env:
+          FACTORIO_MOD_UPLOAD_API_KEY: ${{ secrets.FACTORIO_MOD_UPLOAD_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$FACTORIO_MOD_UPLOAD_API_KEY"
+          version="$(python3 -c "import json; print(json.load(open('mod/hmph-wiretap/info.json'))['version'])")"
+          upload_url="$(curl --fail-with-body --silent --show-error \
+            --request POST 'https://mods.factorio.com/api/v2/mods/releases/init_upload' \
+            --header "Authorization: Bearer $FACTORIO_MOD_UPLOAD_API_KEY" \
+            --form 'mod=hmph-wiretap' | python3 -c 'import json, sys; print(json.load(sys.stdin)["upload_url"])')"
+          curl --fail-with-body --silent --show-error \
+            --request POST "$upload_url" \
+            --form "file=@dist/hmph-wiretap_${version}.zip"
+
+  release:
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and verify release archive
+        run: |
+          ./scripts/package.sh
+          version="$(python3 -c "import json; print(json.load(open('mod/hmph-wiretap/info.json'))['version'])")"
+          test "${GITHUB_REF_NAME}" = "v${version}"
+
+      - name: Create Forgejo release and upload ZIP
+        env:
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="$(python3 -c "import json; print(json.load(open('mod/hmph-wiretap/info.json'))['version'])")"
+          api="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}"
+          response_file="$(mktemp)"
+          status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
+            --request POST "${api}/releases" \
+            --header "Authorization: token ${FORGEJO_TOKEN}" \
+            --header 'Content-Type: application/json' \
+            --data "$(printf '{"tag_name":"%s","name":"Hmph Wiretap %s","generate_release_notes":true}' "$GITHUB_REF_NAME" "$version")")"
+          if [ "$status" = 201 ]; then
+            release="$(cat "$response_file")"
+          elif [ "$status" = 409 ] || [ "$status" = 422 ]; then
+            release="$(curl --fail-with-body --silent --show-error \
+              --header "Authorization: token ${FORGEJO_TOKEN}" \
+              "${api}/releases/tags/${GITHUB_REF_NAME}")"
+          else
+            cat "$response_file"
+            exit 1
+          fi
+          upload_url="$(printf '%s' "$release" | python3 -c 'import json, sys; print(json.load(sys.stdin)["upload_url"].split("{")[0])')"
+          existing_asset_url="$(printf '%s' "$release" | python3 -c 'import json, sys; print(next((a["url"] for a in json.load(sys.stdin).get("assets", []) if a["name"] == sys.argv[1]), ""))' "hmph-wiretap_${version}.zip")"
+          if [ -n "$existing_asset_url" ]; then
+            curl --fail-with-body --silent --show-error \
+              --request DELETE "$existing_asset_url" \
+              --header "Authorization: token ${FORGEJO_TOKEN}"
+          fi
+          curl --fail-with-body --silent --show-error \
+            --request POST "${upload_url}?name=hmph-wiretap_${version}.zip" \
+            --header "Authorization: token ${FORGEJO_TOKEN}" \
+            --header 'Content-Type: application/zip' \
+            --data-binary "@dist/hmph-wiretap_${version}.zip"

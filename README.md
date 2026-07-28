@@ -1,4 +1,20 @@
-# wiretap
+# Hmph Wiretap
+
+Hmph Wiretap is a maintained fork of [Wiretap on the Factorio Mod Portal](https://mods.factorio.com/mod/wiretap)
+by [ekrauser/wiretap](https://github.com/ekrauser/wiretap). It retains the original
+mod's purpose and credits while adding the Prometheus bridge, Grafana dashboard, and
+deployment workflow used by Hmph.
+
+The mod is published under its own Mod Portal identity, `hmph-wiretap`, so it never
+impersonates or modifies the original listing.
+
+## Client installation
+
+The Factorio client must use the exact same Hmph Wiretap version as the server.
+Download the ZIP from the latest successful **Build Factorio mod** Forgejo Actions
+run, place it in Factorio's `mods` directory, then enable Wiretap in the Mods menu.
+
+On macOS the directory is `~/Library/Application Support/factorio/mods/`.
 
 Export as many vitals as possible from Factorio **2.0.x** to the outside world, so you
 can watch your factory from Home Assistant, Grafana, MQTT dashboards, or an ESP32 on
@@ -8,7 +24,7 @@ Two parts:
 
 | Part | What it does |
 | --- | --- |
-| [`mod/wiretap`](mod/wiretap/) | Factorio mod. Every N seconds it writes a JSON snapshot of the game's stats to `script-output/wiretap/stats.json` (and/or an append-only NDJSON journal). Also exposes a remote interface and a `/wiretap` command for live RCON polling. |
+| [`mod/hmph-wiretap`](mod/hmph-wiretap/) | Factorio mod. Every N seconds it writes a JSON snapshot of the game's stats to `script-output/wiretap/stats.json` (and/or an append-only NDJSON journal). Also exposes a `wiretap` remote interface and `/wiretap` command for live RCON polling. It conflicts with the original `wiretap` package. |
 | [`companion/wiretap_bridge.py`](companion/wiretap_bridge.py) | Python bridge (stdlib-only). Watches the JSON file and re-serves it as an HTTP API (`/stats`), Prometheus metrics (`/metrics`), and optionally MQTT with Home Assistant auto-discovery. |
 
 The mod can't talk to the network directly — Factorio's Lua sandbox only allows writing
@@ -108,7 +124,7 @@ Option A — folder (easiest for development):
 
 ```bash
 # Linux / WSL (adjust the target to your Factorio user-data dir)
-cp -r mod/wiretap ~/.factorio/mods/wiretap
+cp -r mod/hmph-wiretap ~/.factorio/mods/hmph-wiretap
 ```
 
 Option B — zip:
@@ -124,7 +140,7 @@ then drop the zip into your mods folder:
 - Playing on Windows but running the bridge in WSL? The mods folder is at
   `/mnt/c/Users/<you>/AppData/Roaming/Factorio/mods/`.
 
-Enable **Wiretap** in the in-game Mods menu and load your save. Within one
+Enable **Hmph Wiretap** in the in-game Mods menu and load your save. Within one
 interval (default 10 s) the snapshot appears at:
 
 - Windows: `%APPDATA%\Factorio\script-output\wiretap\stats.json`

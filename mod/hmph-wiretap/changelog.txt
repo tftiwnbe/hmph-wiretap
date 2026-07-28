@@ -1,3 +1,13 @@
+Version: 1.0.5
+Date: 2026-07-29
+  Changes:
+    - Initial Hmph Wiretap fork release under a separate Mod Portal identity.
+    - Preserves compatibility with the original Wiretap output format, settings,
+      remote interface and /wiretap command.
+    - Packages the supplied thumbnail in every client archive.
+    - Explicitly conflicts with the original wiretap package.
+  Credits:
+    - Based on Wiretap by Eric Krauser (ekrauser).
 ---------------------------------------------------------------------------------------------------
 Version: 1.0.3
 Date: 2026-07-19
