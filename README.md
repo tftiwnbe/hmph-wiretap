@@ -16,7 +16,7 @@ run, place it in Factorio's `mods` directory, then enable Wiretap in the Mods me
 
 On macOS the directory is `~/Library/Application Support/factorio/mods/`.
 
-Export as many vitals as possible from Factorio **2.0.x** to the outside world, so you
+Export as many vitals as possible from Factorio **2.1.x** to the outside world, so you
 can watch your factory from Home Assistant, Grafana, MQTT dashboards, or an ESP32 on
 your desk.
 

@@ -1,9 +1,9 @@
 {
   "name": "hmph-wiretap",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "title": "Wiretap – Stats Exporter",
   "author": "ekrauser, wnbe",
-  "factorio_version": "2.0",
+  "factorio_version": "2.1",
   "description": "A maintained Hmph fork of Wiretap by ekrauser. Periodically exports game vitals as JSON to script-output: logistics, power, production totals, pollution, research and evolution. Poll it from Prometheus, Grafana, Home Assistant or MQTT via the companion bridge, or query live over RCON with /wiretap.",
-  "dependencies": ["base >= 2.0.0", "! wiretap"]
+  "dependencies": ["base >= 2.1.0", "! wiretap"]
 }
