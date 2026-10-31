@@ -150,6 +150,7 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
 
     meta = _d(snapshot.get("meta"))
     emit("game_tick", {}, meta.get("tick", 0))
+    emit("game_time_seconds", {}, meta.get("game_time_seconds", 0))
     emit("players_online", {}, meta.get("player_count", 0))
 
     for sname, surf in _d(snapshot.get("surfaces")).items():
@@ -182,8 +183,26 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
             ):
                 if key in net:
                     emit(metric, ns, net[key])
+            for entity, watts in _d(net.get("production_by_entity")).items():
+                emit("power_production_by_entity_watts", {**ns, "entity": entity}, watts)
+            for entity, watts in _d(net.get("consumption_by_entity")).items():
+                emit("power_consumption_by_entity_watts", {**ns, "entity": entity}, watts)
         for ename, cnt in _d(power.get("count_by_entity")).items():
             emit("entity_count", {"surface": sname, "entity": ename}, cnt)
+
+        defense = _d(surf.get("defense"))
+        for entity, count in _d(defense.get("entity_counts")).items():
+            emit("defense_entity_count", {**s, "entity": entity}, count)
+        for key, metric in (("loaded_turret_count", "loaded_turret_count"), ("empty_turret_count", "empty_turret_count")):
+            if key in defense:
+                emit(metric, s, defense[key])
+        for item, count in _d(defense.get("ammo_by_item")).items():
+            emit("defense_ammo_count", {**s, "item": item}, count)
+        for table_key, metric in (("damage_received", "defense_damage_received_total"), ("damage_events", "defense_damage_events_total"), ("enemy_kills", "defense_enemy_kills_total"), ("player_losses", "defense_player_losses_total")):
+            for entity, by_damage in _d(defense.get(table_key)).items():
+                for damage_type, by_attacker in _d(by_damage).items():
+                    for attacker_force, total in _d(by_attacker).items():
+                        emit(metric, {**s, "entity": entity, "damage_type": damage_type, "attacker_force": attacker_force}, total)
 
         for fname, log in _d(surf.get("logistics")).items():
             fs = {"surface": sname, "force": fname}
@@ -204,7 +223,13 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
         f = {"force": fname}
         research = _d(force.get("research"))
         if research.get("progress") is not None:
-            emit("research_progress", f, research["progress"])
+            labels = {**f, "technology": research["current"]} if research.get("current") else f
+            emit("research_progress", labels, research["progress"])
+        if research.get("current") is not None:
+            emit("research_current", {**f, "technology": research["current"]}, 1)
+            emit("research_current_level", {**f, "technology": research["current"]}, research.get("current_level", 1))
+        if research.get("queue") is not None:
+            emit("research_queue_length", f, len(research["queue"]))
         if research.get("technologies_researched") is not None:
             emit("technologies_researched", f, research["technologies_researched"])
             emit("technologies_total", f, research.get("technologies_total", 0))
@@ -212,6 +237,9 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
             emit("rockets_launched", f, force["rockets_launched"])
         for sname, evo in _d(force.get("evolution")).items():
             emit("evolution_factor", {"force": fname, "surface": sname}, evo)
+        for sname, components in _d(force.get("evolution_components")).items():
+            for component, value in _d(components).items():
+                emit("evolution_component", {"force": fname, "surface": sname, "component": component}, value)
         for sname, packs in _d(force.get("science_packs")).items():
             for pack, v in _d(packs).items():
                 ps = {"force": fname, "surface": sname, "item": pack}

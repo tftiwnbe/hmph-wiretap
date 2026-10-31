@@ -48,6 +48,10 @@ Per **surface** (every planet, moon, and space platform is a surface):
   (optionally broken down by quality), robot counts (logistic/construction,
   total/available), network count.
 - **Pollution**: total on the surface, plus cumulative produced/absorbed by source.
+- **Defense**: player-force turrets, walls, and gates by entity; loaded/empty ammo turrets and
+  ammunition by item; cumulative damage and hit events received by player-force entities;
+  enemy kills and player entity losses. Damage/death counters include surface, entity, damage
+  type, and attacker force dimensions.
 
 Per **force**: current research + progress + level, research queue, previous
 research, researched/total technology counts, **science pack rates** (packs per
@@ -55,7 +59,8 @@ minute produced/consumed, 1- and 10-minute averages, plus all-time totals, per
 surface), rockets launched, items launched, all-time production/consumption totals
 for items and fluids per surface.
 
-Plus: game tick, play time, online player names, evolution factor per surface.
+Enemy evolution is exported per surface as the total plus its time, pollution, and spawner-kill
+contributors. Plus: game tick, play time, online player names.
 
 <details>
 <summary>Snapshot shape (abridged)</summary>
@@ -63,7 +68,7 @@ Plus: game tick, play time, online player names, evolution factor per surface.
 ```json
 {
   "meta": {"tick": 12345, "game_time_seconds": 205, "player_count": 1,
-            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.0.3"},
+            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.2.0"},
   "surfaces": {
     "nauvis": {
       "index": 1,
@@ -130,7 +135,7 @@ cp -r mod/hmph-wiretap ~/.factorio/mods/hmph-wiretap
 Option B — zip:
 
 ```bash
-./scripts/package.sh          # builds dist/wiretap_<version>.zip
+./scripts/package.sh          # builds dist/hmph-wiretap_<version>.zip
 ```
 
 then drop the zip into your mods folder:
@@ -150,7 +155,7 @@ All knobs live in **Settings → Mod settings → Map**: interval, number precis
 (exported values are rounded to 3 decimal places by default to keep the file small),
 output mode (snapshot / journal / both), filenames, and per-category toggles
 (logistics, quality breakdown, power, per-entity power breakdown, accumulator scan,
-production totals, science pack rates, pollution). Changes apply immediately, no
+production totals, science pack rates, pollution, defense/combat). Changes apply immediately, no
 restart needed. Research progress is always exported.
 
 Two quirks in the exported data are the game's own, passed through faithfully:
@@ -307,5 +312,7 @@ Useful series: `factorio_power_production_watts{surface=…}`,
 utilization),
 `factorio_science_pack_consumption_per_minute{item=…}` (your live SPM),
 `factorio_technologies_researched`, `factorio_evolution_factor`,
+`factorio_power_production_by_entity_watts`, `factorio_defense_damage_received_total`,
+`factorio_defense_enemy_kills_total`, `factorio_evolution_component`,
 `factorio_stats_age_seconds` (alert if it grows — the game is paused, crashed, or
 the mod is disabled).

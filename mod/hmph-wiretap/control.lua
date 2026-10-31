@@ -23,7 +23,7 @@
 --  * on_load may only read `storage`, so the export interval is mirrored
 --    into storage for timer re-registration on load.
 
-local MOD_VERSION = "1.0.3"
+local MOD_VERSION = "1.2.0"
 local SETTING_PREFIX = "wiretap-"
 local PRECISION = defines.flow_precision_index.five_seconds
 
@@ -35,6 +35,59 @@ end
 local function nonempty(t)
   if next(t) == nil then return nil end
   return t
+end
+
+-- Bounded aggregate helpers for combat telemetry. These maps contain entity,
+-- damage-type, force, and surface names only (never positions or unit numbers).
+local function nested_add(root, keys, amount)
+  local node = root
+  for i = 1, #keys - 1 do
+    local key = keys[i]
+    node[key] = node[key] or {}
+    node = node[key]
+  end
+  local key = keys[#keys]
+  node[key] = (node[key] or 0) + amount
+end
+
+local function valid_name(obj, fallback)
+  if not obj then return fallback end
+  local ok, name = pcall(function() return obj.name end)
+  if ok and name then return name end
+  return fallback
+end
+
+local function ensure_defense_storage()
+  storage.defense = storage.defense or {}
+  storage.defense.damage_received = storage.defense.damage_received or {}
+  storage.defense.damage_events = storage.defense.damage_events or {}
+  storage.defense.enemy_kills = storage.defense.enemy_kills or {}
+  storage.defense.player_losses = storage.defense.player_losses or {}
+end
+
+local function collect_defenses(surface)
+  local types = {"ammo-turret", "electric-turret", "fluid-turret", "artillery-turret", "wall", "gate"}
+  local entities = surface.find_entities_filtered{type = types, force = "player"}
+  local out = {entity_counts = {}, ammo_by_item = {}, loaded_turret_count = 0, empty_turret_count = 0}
+  for _, entity in pairs(entities) do
+    local kind = entity.type or "unknown"
+    out.entity_counts[entity.name] = (out.entity_counts[entity.name] or 0) + 1
+    if kind == "ammo-turret" then
+      local inventory = entity.get_inventory(defines.inventory.turret_ammo)
+      local loaded = inventory and not inventory.is_empty()
+      if loaded then
+        out.loaded_turret_count = out.loaded_turret_count + 1
+        for _, item in pairs(inventory.get_contents()) do
+          out.ammo_by_item[item.name] = (out.ammo_by_item[item.name] or 0) + item.count
+        end
+      else
+        out.empty_turret_count = out.empty_turret_count + 1
+      end
+    end
+  end
+  out.entity_counts = nonempty(out.entity_counts)
+  out.ammo_by_item = nonempty(out.ammo_by_item)
+  return out
 end
 
 -- Full float64 precision is dashboard noise and inflates the payload
@@ -338,10 +391,16 @@ local function collect_forces(include_production, include_science)
       out[force.name] = entry
     elseif force.name == "enemy" then
       local evolution = {}
+      local components = {}
       for _, surface in pairs(game.surfaces) do
         evolution[surface.name] = force.get_evolution_factor(surface)
+        components[surface.name] = {
+          time = force.get_evolution_factor_by_time(surface),
+          pollution = force.get_evolution_factor_by_pollution(surface),
+          spawner_kills = force.get_evolution_factor_by_killing_spawners(surface),
+        }
       end
-      out[force.name] = {evolution = evolution}
+      out[force.name] = {evolution = evolution, evolution_components = components}
     end
   end
   return nonempty(out)
@@ -383,6 +442,15 @@ local function build_snapshot()
     end
     if include_logistics then
       s.logistics = collect_logistics(surface, quality_breakdown)
+    end
+    if cfg("defense") then
+      s.defense = collect_defenses(surface)
+      local defense = storage.defense or {}
+      local key = surface.name
+      s.defense.damage_received = nonempty(defense.damage_received and defense.damage_received[key] or {})
+      s.defense.damage_events = nonempty(defense.damage_events and defense.damage_events[key] or {})
+      s.defense.enemy_kills = nonempty(defense.enemy_kills and defense.enemy_kills[key] or {})
+      s.defense.player_losses = nonempty(defense.player_losses and defense.player_losses[key] or {})
     end
     surfaces[surface.name] = s
   end
@@ -429,6 +497,57 @@ local function do_export()
 end
 
 -- --------------------------------------------------------------------------
+-- Defense telemetry: event counters are cumulative for the current save.
+-- Only player-force structures are damage-tracked; deaths are split into
+-- player losses and enemy kills.
+-- --------------------------------------------------------------------------
+
+script.on_event(defines.events.on_entity_damaged, function(event)
+  if not cfg("defense") then return end
+  local entity = event.entity
+  if not (entity and entity.valid and entity.force and entity.force.name == "player") then return end
+  ensure_defense_storage()
+  local surface = entity.surface.name
+  local entity_name = entity.name or "unknown"
+  local damage_type = valid_name(event.damage_type, "unknown")
+  local attacker_force = valid_name(event.force, valid_name(event.cause and event.cause.force, "environment"))
+  local keys = {surface, entity_name, damage_type, attacker_force}
+  nested_add(storage.defense.damage_received, keys, event.final_damage_amount or 0)
+  nested_add(storage.defense.damage_events, keys, 1)
+end, {
+  {filter = "turret"},
+  {filter = "wall-connectable"},
+  {filter = "type", type = "roboport"},
+  {filter = "type", type = "electric-pole"},
+  {filter = "type", type = "radar"},
+  {filter = "type", type = "container"},
+  {filter = "type", type = "logistic-container"},
+  {filter = "type", type = "mining-drill"},
+  {filter = "type", type = "generator"},
+  {filter = "type", type = "boiler"},
+  {filter = "type", type = "lab"},
+  {filter = "type", type = "assembling-machine"},
+  {filter = "type", type = "furnace"},
+})
+
+script.on_event(defines.events.on_entity_died, function(event)
+  if not cfg("defense") then return end
+  local entity = event.entity
+  if not (entity and entity.valid and entity.force) then return end
+  ensure_defense_storage()
+  local force_name = entity.force.name
+  local surface = entity.surface.name
+  local entity_name = entity.name or "unknown"
+  local damage_type = valid_name(event.damage_type, "unknown")
+  local attacker_force = valid_name(event.force, valid_name(event.cause and event.cause.force, "environment"))
+  if force_name == "enemy" then
+    nested_add(storage.defense.enemy_kills, {surface, entity_name, damage_type, attacker_force}, 1)
+  elseif force_name == "player" then
+    nested_add(storage.defense.player_losses, {surface, entity_name, damage_type, attacker_force}, 1)
+  end
+end, {{filter = "force", force = "player"}, {filter = "force", force = "enemy"}})
+
+-- --------------------------------------------------------------------------
 -- Timer wiring. on_load may only read `storage`, so the interval is
 -- mirrored there whenever it can be read from settings (game context).
 -- --------------------------------------------------------------------------
@@ -443,6 +562,7 @@ local function register_timer()
 end
 
 script.on_init(function()
+  ensure_defense_storage()
   refresh_interval()
   register_timer()
 end)
@@ -450,6 +570,7 @@ end)
 script.on_load(register_timer)
 
 script.on_configuration_changed(function()
+  ensure_defense_storage()
   refresh_interval()
   register_timer()
 end)

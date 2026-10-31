@@ -1,3 +1,14 @@
+---------------------------------------------------------------------------------------------------
+Version: 1.2.0
+Date: 2026-10-31
+  Features:
+    - Prometheus power output includes generation and consumption by entity and network.
+    - Defense telemetry includes structure/ammo counts, damage received, enemy kills, and losses.
+    - Evolution includes time, pollution, and spawner-kill contributors by surface.
+    - Research exports current technology labels and queue length.
+  Changes:
+    - Updated the maintained Hmph fork for Factorio 2.1 and refreshed Grafana telemetry panels.
+---------------------------------------------------------------------------------------------------
 Version: 1.1.0
 Date: 2026-07-29
   Changes:

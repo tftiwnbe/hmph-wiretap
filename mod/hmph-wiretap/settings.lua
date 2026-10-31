@@ -102,4 +102,11 @@ data:extend({
     default_value = true,
     order = "l",
   },
+  {
+    type = "bool-setting",
+    name = "wiretap-defense",
+    setting_type = "runtime-global",
+    default_value = true,
+    order = "m",
+  },
 })
