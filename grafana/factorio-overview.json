@@ -127,8 +127,9 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "100 * factorio_research_progress",
-                        "legendFormat": "{{technology}}"
+                        "expr": "100 * factorio_research_progress{force=\"player\",technology=~\".+\"}",
+                        "legendFormat": "{{technology}}",
+                        "instant": true
                       },
                       "version": "v0"
                     },
@@ -140,7 +141,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Instant value for the player force\u2019s active research. No value means research is currently idle.",
           "id": 2,
           "links": [],
           "title": "Current research progress",
