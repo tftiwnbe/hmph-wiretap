@@ -190,6 +190,21 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
         for ename, cnt in _d(power.get("count_by_entity")).items():
             emit("entity_count", {"surface": sname, "entity": ename}, cnt)
 
+        trains = _d(surf.get("trains"))
+        if trains:
+            for key, metric in (
+                ("total", "train_count"),
+                ("moving", "train_moving_count"),
+                ("waiting", "train_waiting_count"),
+                ("blocked", "train_blocked_count"),
+                ("manual", "train_manual_count"),
+                ("stop_count", "train_stop_count"),
+            ):
+                if key in trains:
+                    emit(metric, s, trains[key])
+            for state, count in _d(trains.get("by_state")).items():
+                emit("train_state_count", {**s, "state": state}, count)
+
         defense = _d(surf.get("defense"))
         for entity, count in _d(defense.get("entity_counts")).items():
             emit("defense_entity_count", {**s, "entity": entity}, count)

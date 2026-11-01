@@ -104,6 +104,13 @@ data:extend({
   },
   {
     type = "bool-setting",
+    name = "wiretap-trains",
+    setting_type = "runtime-global",
+    default_value = true,
+    order = "ma",
+  },
+  {
+    type = "bool-setting",
     name = "wiretap-defense",
     setting_type = "runtime-global",
     default_value = true,

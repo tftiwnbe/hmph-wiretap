@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.0
+Date: 2026-11-01
+  Features:
+    - Exports per-surface player train counts by state, including moving, waiting, blocked, manual, and train-stop totals.
+    - Adds train traffic and research-rate signals to the Factorio Terrarium Grafana overview.
+    - Reworks Overview for compact, always-on display with power, research, defense, and train health at a glance.
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 Version: 1.2.0
 Date: 2026-10-31
   Features:

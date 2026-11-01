@@ -23,7 +23,7 @@
 --  * on_load may only read `storage`, so the export interval is mirrored
 --    into storage for timer re-registration on load.
 
-local MOD_VERSION = "1.2.0"
+local MOD_VERSION = "1.3.0"
 local SETTING_PREFIX = "wiretap-"
 local PRECISION = defines.flow_precision_index.five_seconds
 
@@ -63,6 +63,37 @@ local function ensure_defense_storage()
   storage.defense.damage_events = storage.defense.damage_events or {}
   storage.defense.enemy_kills = storage.defense.enemy_kills or {}
   storage.defense.player_losses = storage.defense.player_losses or {}
+end
+
+local train_state_names = {}
+for name, state in pairs(defines.train_state) do
+  train_state_names[state] = name
+end
+
+local function collect_trains(surface)
+  local trains = game.train_manager.get_trains{surface = surface, force = "player"}
+  local out = {
+    total = #trains,
+    moving = 0,
+    waiting = 0,
+    blocked = 0,
+    manual = 0,
+    stop_count = surface.count_entities_filtered{type = "train-stop", force = "player"},
+    by_state = {},
+  }
+  for _, train in pairs(trains) do
+    local state = train_state_names[train.state] or "other"
+    out.by_state[state] = (out.by_state[state] or 0) + 1
+    if math.abs(train.speed) > 0 then out.moving = out.moving + 1 end
+    if train.manual_mode then out.manual = out.manual + 1 end
+    if state == "wait_signal" or state == "wait_station" then
+      out.waiting = out.waiting + 1
+    elseif state == "no_path" or state == "destination_full" then
+      out.blocked = out.blocked + 1
+    end
+  end
+  out.by_state = nonempty(out.by_state)
+  return out
 end
 
 local function collect_defenses(surface)
@@ -419,6 +450,7 @@ local function build_snapshot()
   local include_production = cfg("production")
   local include_science = cfg("science")
   local include_pollution = cfg("pollution")
+  local include_trains = cfg("trains")
 
   local players = {}
   for _, player in pairs(game.connected_players) do
@@ -442,6 +474,9 @@ local function build_snapshot()
     end
     if include_logistics then
       s.logistics = collect_logistics(surface, quality_breakdown)
+    end
+    if include_trains then
+      s.trains = collect_trains(surface)
     end
     if cfg("defense") then
       s.defense = collect_defenses(surface)

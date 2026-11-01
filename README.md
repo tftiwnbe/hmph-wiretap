@@ -315,4 +315,7 @@ utilization),
 `factorio_power_production_by_entity_watts`, `factorio_defense_damage_received_total`,
 `factorio_defense_enemy_kills_total`, `factorio_evolution_component`,
 `factorio_stats_age_seconds` (alert if it grows — the game is paused, crashed, or
-the mod is disabled).
+the mod is disabled). Train telemetry is available as `factorio_train_count`,
+`factorio_train_moving_count`, `factorio_train_waiting_count`,
+`factorio_train_blocked_count`, `factorio_train_manual_count`,
+`factorio_train_stop_count`, and `factorio_train_state_count{surface=…,state=…}`.

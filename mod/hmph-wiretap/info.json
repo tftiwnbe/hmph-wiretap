@@ -1,10 +1,10 @@
 {
   "name": "hmph-wiretap",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "title": "Wiretap – Stats Exporter",
   "author": "ekrauser, wnbe",
   "factorio_version": "2.1",
-  "description": "A maintained Hmph fork of Wiretap. Exports per-surface factory, energy, pollution, evolution, research, logistics, and defense telemetry to JSON for Prometheus and Grafana.",
+  "description": "A maintained Hmph fork of Wiretap. Exports per-surface factory, energy, pollution, evolution, research, logistics, defense, and train telemetry to JSON for Prometheus and Grafana.",
   "dependencies": [
     "base >= 2.1.0",
     "! wiretap"
