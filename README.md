@@ -69,7 +69,8 @@ contributors. Plus: game tick, play time, online player names.
 ```json
 {
   "meta": {"tick": 12345, "game_time_seconds": 205, "player_count": 1,
-            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.2.0"},
+            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.3.4",
+            "robot_order_sample_interval_seconds": 60, "robot_order_sample_age_seconds": 3},
   "surfaces": {
     "nauvis": {
       "index": 1,
@@ -92,7 +93,13 @@ contributors. Plus: game tick, play time, online player names.
           "network_count": 2,
           "items": {"iron-plate": 3200, "copper-plate": 1800},
           "robots": {"logistic_total": 50, "logistic_available": 41,
-                      "construction_total": 20, "construction_available": 20}
+                      "construction_total": 20, "construction_available": 20,
+                      "waiting_for_charge": 1},
+          "robot_orders": {
+            "logistic": {"pickup": 4, "deliver": 3, "pickup_items": 0, "deliver_items": 0},
+            "construction": {"construct": 2, "repair": 0, "deconstruct": 0,
+                             "upgrade": 0, "explode_cliff": 0}
+          }
         }
       }
     }
@@ -205,6 +212,14 @@ per-surface power production/consumption (W), accumulator charge (%), pollution,
 science consumed per minute, players online, game tick, and one sensor per
 `--watch-items` item (logistic count summed across all surfaces). Topics are published under `wiretap/…` (retained),
 with availability on `wiretap/availability`.
+
+Robot Prometheus gauges include:
+
+- `factorio_robot_waiting_for_charge_count`, labeled by surface and force; this counts robots
+  queued for charging across logistic cells in each network.
+- `factorio_robot_order_count`, labeled by surface, force, robot kind, and order type. It counts
+  robots by the first order in their current order queue and refreshes once per minute; snapshots
+  between samples reuse the last result.
 
 <details>
 <summary>systemd unit example</summary>

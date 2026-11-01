@@ -243,6 +243,14 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
             }.items():
                 if key in robots:
                     emit("robots", {**fs, "kind": kind, "state": state_}, robots[key])
+            if "waiting_for_charge" in robots:
+                emit("robot_waiting_for_charge_count", fs,
+                     robots["waiting_for_charge"])
+            for kind, orders in _d(log.get("robot_orders")).items():
+                for order_type, count in _d(orders).items():
+                    emit("robot_order_count", {
+                        **fs, "kind": kind, "order_type": order_type,
+                    }, count)
             for item, count in _d(log.get("items")).items():
                 emit("logistic_item_count", {**fs, "item": item}, count)
 

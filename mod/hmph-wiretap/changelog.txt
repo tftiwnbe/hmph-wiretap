@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.4
+Date: 2026-11-01
+  Features:
+    - Exports robots waiting to charge per surface and force.
+    - Exports robot work-order counts by type, sampled once per minute to limit scanning cost.
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 Version: 1.3.3
 Date: 2026-11-01
   Features:

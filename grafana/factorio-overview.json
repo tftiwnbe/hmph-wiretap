@@ -2,7 +2,8 @@
   "apiVersion": "dashboard.grafana.app/v2",
   "kind": "Dashboard",
   "metadata": {
-    "name": "factorio-overview"
+    "name": "factorio-overview",
+    "uid": "5b31bd2e-d57f-4484-ab50-5fe0ef6f8083"
   },
   "spec": {
     "annotations": [
@@ -60,7 +61,7 @@
               "transformations": []
             }
           },
-          "description": "Connected players right now.",
+          "description": "",
           "id": 1,
           "links": [],
           "title": "Players online",
@@ -137,7 +138,7 @@
               "transformations": []
             }
           },
-          "description": "Current technology and progress. Idle research shows no data.",
+          "description": "",
           "id": 2,
           "links": [],
           "title": "Research",
@@ -158,7 +159,8 @@
                       }
                     ]
                   },
-                  "unit": "percent"
+                  "unit": "percent",
+                  "noValue": "Nothing"
                 },
                 "overrides": []
               },
@@ -190,7 +192,11 @@
                 "sparkline": true,
                 "textMode": "value_and_name",
                 "graphMode": "none",
-                "wideLayout": true
+                "wideLayout": true,
+                "colorMode": "value",
+                "justifyMode": "auto",
+                "percentChangeColorMode": "standard",
+                "showPercentChange": false
               }
             },
             "version": "13.3.0"
@@ -215,8 +221,10 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "max(100 * factorio_evolution_factor{surface=~\"$surface\",force=\"enemy\"})",
-                        "legendFormat": "Evolution"
+                        "expr": "# Highest enemy evolution value among the selected surfaces.\nmax(100 * factorio_evolution_factor{surface=~\"$surface\",force=\"enemy\"})",
+                        "legendFormat": "Evolution",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -228,7 +236,7 @@
               "transformations": []
             }
           },
-          "description": "Highest enemy evolution value among the selected surfaces.",
+          "description": "",
           "id": 3,
           "links": [],
           "title": "Max evolution",
@@ -296,7 +304,9 @@
                       "kind": "DataQuery",
                       "spec": {
                         "expr": "sum(factorio_power_headroom_watts{surface=~\"$surface\"})",
-                        "legendFormat": "Power headroom"
+                        "legendFormat": "Power headroom",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -323,7 +333,7 @@
                     "steps": [
                       {
                         "color": "red",
-                        "value": null
+                        "value": 0
                       },
                       {
                         "color": "orange",
@@ -355,263 +365,6 @@
                 "showPercentChange": false,
                 "textMode": "none",
                 "wideLayout": true
-              }
-            },
-            "version": "13.3.0"
-          }
-        }
-      },
-      "panel-5": {
-        "kind": "Panel",
-        "spec": {
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "query": {
-                      "datasource": {
-                        "name": "eftidbgh9pqm8c"
-                      },
-                      "group": "prometheus",
-                      "kind": "DataQuery",
-                      "spec": {
-                        "expr": "factorio_pollution{surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}}"
-                      },
-                      "version": "v0"
-                    },
-                    "refId": "A"
-                  }
-                }
-              ],
-              "queryOptions": {},
-              "transformations": []
-            }
-          },
-          "description": "",
-          "id": 5,
-          "links": [],
-          "title": "Pollution on each surface",
-          "vizConfig": {
-            "group": "timeseries",
-            "kind": "VizConfig",
-            "spec": {
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "linear",
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      },
-                      {
-                        "color": "red",
-                        "value": 80
-                      }
-                    ]
-                  },
-                  "unit": "short"
-                },
-                "overrides": []
-              },
-              "options": {
-                "annotations": {
-                  "clustering": -1,
-                  "multiLane": false
-                },
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "enableFacetedFilter": false,
-                  "overflow": "ellipsis",
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              }
-            },
-            "version": "13.3.0"
-          }
-        }
-      },
-      "panel-6": {
-        "kind": "Panel",
-        "spec": {
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "query": {
-                      "datasource": {
-                        "name": "eftidbgh9pqm8c"
-                      },
-                      "group": "prometheus",
-                      "kind": "DataQuery",
-                      "spec": {
-                        "expr": "sum(factorio_power_production_watts{surface=~\"$surface\"})",
-                        "legendFormat": "Production"
-                      },
-                      "version": "v0"
-                    },
-                    "refId": "A"
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "query": {
-                      "datasource": {
-                        "name": "eftidbgh9pqm8c"
-                      },
-                      "group": "prometheus",
-                      "kind": "DataQuery",
-                      "spec": {
-                        "expr": "sum(factorio_power_consumption_watts{surface=~\"$surface\"})",
-                        "legendFormat": "Consumption"
-                      },
-                      "version": "v0"
-                    },
-                    "refId": "B"
-                  }
-                }
-              ],
-              "queryOptions": {},
-              "transformations": []
-            }
-          },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
-          "id": 6,
-          "links": [],
-          "title": "Power generation and draw",
-          "vizConfig": {
-            "group": "timeseries",
-            "kind": "VizConfig",
-            "spec": {
-              "fieldConfig": {
-                "defaults": {
-                  "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "linear",
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  },
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      },
-                      {
-                        "color": "red",
-                        "value": 80
-                      }
-                    ]
-                  },
-                  "unit": "watt"
-                },
-                "overrides": []
-              },
-              "options": {
-                "annotations": {
-                  "clustering": -1,
-                  "multiLane": false
-                },
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "enableFacetedFilter": false,
-                  "overflow": "ellipsis",
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
               }
             },
             "version": "13.3.0"
@@ -775,7 +528,9 @@
                       "kind": "DataQuery",
                       "spec": {
                         "expr": "sum by (entity) (factorio_power_production_by_entity_watts{surface=~\"$surface\"})",
-                        "legendFormat": "{{entity}}"
+                        "legendFormat": "{{entity}}",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -787,7 +542,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 8,
           "links": [],
           "title": "Generation by entity",
@@ -894,7 +649,9 @@
                       "kind": "DataQuery",
                       "spec": {
                         "expr": "sum by (entity) (factorio_power_consumption_by_entity_watts{surface=~\"$surface\"})",
-                        "legendFormat": "{{entity}}"
+                        "legendFormat": "{{entity}}",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -906,7 +663,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 9,
           "links": [],
           "title": "Consumption by entity",
@@ -977,10 +734,10 @@
                 },
                 "legend": {
                   "calcs": [],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
-                  "placement": "bottom",
+                  "placement": "right",
                   "showLegend": true
                 },
                 "tooltip": {
@@ -1013,7 +770,9 @@
                       "kind": "DataQuery",
                       "spec": {
                         "expr": "100 * sum(factorio_accumulator_charge_joules{surface=~\"$surface\"}) / sum(factorio_accumulator_capacity_joules{surface=~\"$surface\"})",
-                        "legendFormat": "Charge"
+                        "legendFormat": "Charge",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -1025,7 +784,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 10,
           "links": [],
           "title": "Accumulator charge",
@@ -1106,7 +865,9 @@
                       "kind": "DataQuery",
                       "spec": {
                         "expr": "sum(factorio_electric_network_count{surface=~\"$surface\"})",
-                        "legendFormat": "Networks"
+                        "legendFormat": "Networks",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -1118,52 +879,18 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 11,
           "links": [],
           "title": "Electric networks",
           "vizConfig": {
-            "group": "timeseries",
+            "group": "stat",
             "kind": "VizConfig",
             "spec": {
               "fieldConfig": {
                 "defaults": {
                   "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "linear",
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
+                    "mode": "thresholds"
                   },
                   "thresholds": {
                     "mode": "absolute",
@@ -1183,23 +910,21 @@
                 "overrides": []
               },
               "options": {
-                "annotations": {
-                  "clustering": -1,
-                  "multiLane": false
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
                 },
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "enableFacetedFilter": false,
-                  "overflow": "ellipsis",
-                  "placement": "bottom",
-                  "showLegend": true
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
+                "showPercentChange": false,
+                "textMode": "auto",
+                "wideLayout": true
               }
             },
             "version": "13.3.0"
@@ -1225,7 +950,9 @@
                       "kind": "DataQuery",
                       "spec": {
                         "expr": "sum by (entity) (factorio_entity_count{surface=~\"$surface\"})",
-                        "legendFormat": "{{entity}}"
+                        "legendFormat": "{{entity}}",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -1237,7 +964,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 12,
           "links": [],
           "title": "Power entity counts",
@@ -1308,10 +1035,10 @@
                 },
                 "legend": {
                   "calcs": [],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
-                  "placement": "bottom",
+                  "placement": "right",
                   "showLegend": true
                 },
                 "tooltip": {
@@ -1356,7 +1083,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 13,
           "links": [],
           "title": "Pollution stock",
@@ -1475,7 +1202,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 14,
           "links": [],
           "title": "Pollution produced by source",
@@ -1546,10 +1273,10 @@
                 },
                 "legend": {
                   "calcs": [],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
-                  "placement": "bottom",
+                  "placement": "right",
                   "showLegend": true
                 },
                 "tooltip": {
@@ -1594,7 +1321,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 15,
           "links": [],
           "title": "Pollution absorbed by source",
@@ -1665,10 +1392,10 @@
                 },
                 "legend": {
                   "calcs": [],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
-                  "placement": "bottom",
+                  "placement": "right",
                   "showLegend": true
                 },
                 "tooltip": {
@@ -1713,7 +1440,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 16,
           "links": [],
           "title": "Net pollution rate",
@@ -1832,7 +1559,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 17,
           "links": [],
           "title": "Evolution",
@@ -1938,8 +1665,10 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "max by (component) (100 * factorio_evolution_component{force=\"enemy\",surface=~\"$surface\"})",
-                        "legendFormat": "{{component}}"
+                        "expr": "# Highest contribution per evolution component across the selected surfaces.\nmax by (component) (100 * factorio_evolution_component{force=\"enemy\",surface=~\"$surface\"})",
+                        "legendFormat": "{{component}}",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -1951,7 +1680,7 @@
               "transformations": []
             }
           },
-          "description": "Highest contribution per evolution component across the selected surfaces.",
+          "description": "",
           "id": 18,
           "links": [],
           "title": "Evolution contributors",
@@ -2070,7 +1799,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 19,
           "links": [],
           "title": "Defensive structures",
@@ -2208,7 +1937,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 20,
           "links": [],
           "title": "Ammo turrets loaded",
@@ -2327,7 +2056,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 21,
           "links": [],
           "title": "Ammo available",
@@ -2446,7 +2175,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 22,
           "links": [],
           "title": "Damage to player structures by type",
@@ -2508,7 +2237,32 @@
                   },
                   "unit": "short"
                 },
-                "overrides": []
+                "overrides": [
+                  {
+                    "__systemRef": "hideSeriesFrom",
+                    "matcher": {
+                      "id": "byNames",
+                      "options": {
+                        "mode": "exclude",
+                        "names": [
+                          "electric-mining-drill · physical"
+                        ],
+                        "prefix": "All except:",
+                        "readOnly": true
+                      }
+                    },
+                    "properties": [
+                      {
+                        "id": "custom.hideFrom",
+                        "value": {
+                          "legend": false,
+                          "tooltip": true,
+                          "viz": true
+                        }
+                      }
+                    ]
+                  }
+                ]
               },
               "options": {
                 "annotations": {
@@ -2517,10 +2271,10 @@
                 },
                 "legend": {
                   "calcs": [],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
-                  "placement": "bottom",
+                  "placement": "right",
                   "showLegend": true
                 },
                 "tooltip": {
@@ -2565,7 +2319,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 23,
           "links": [],
           "title": "Damage events to player structures",
@@ -2636,10 +2390,10 @@
                 },
                 "legend": {
                   "calcs": [],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
-                  "placement": "bottom",
+                  "placement": "right",
                   "showLegend": true
                 },
                 "tooltip": {
@@ -2703,7 +2457,7 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "",
           "id": 24,
           "links": [],
           "title": "Enemy kills and player structure losses",
@@ -2774,10 +2528,10 @@
                 },
                 "legend": {
                   "calcs": [],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
-                  "placement": "bottom",
+                  "placement": "right",
                   "showLegend": true
                 },
                 "tooltip": {
@@ -2893,10 +2647,10 @@
                 },
                 "legend": {
                   "calcs": [],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
-                  "placement": "bottom",
+                  "placement": "right",
                   "showLegend": true
                 },
                 "tooltip": {
@@ -3012,10 +2766,10 @@
                 },
                 "legend": {
                   "calcs": [],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
-                  "placement": "bottom",
+                  "placement": "right",
                   "showLegend": true
                 },
                 "tooltip": {
@@ -3825,10 +3579,10 @@
                 },
                 "legend": {
                   "calcs": [],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
-                  "placement": "bottom",
+                  "placement": "right",
                   "showLegend": true
                 },
                 "tooltip": {
@@ -3860,8 +3614,10 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (force, kind, state) (factorio_robots{state=~\"available|total\",surface=~\"$surface\"})",
-                        "legendFormat": "{{force}} · {{kind}} · {{state}}"
+                        "expr": "sum by (order_type) (factorio_robot_order_count{force=\"player\",kind=\"logistic\",surface=~\"$surface\"})",
+                        "legendFormat": "{{order_type}}",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -3873,10 +3629,10 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "Robots grouped by the first assigned logistic order. Includes robots waiting on that order; sampled once per minute. Requires the updated Wiretap mod and bridge.",
           "id": 34,
           "links": [],
-          "title": "Robots available and deployed",
+          "title": "Logistic robot work",
           "vizConfig": {
             "group": "timeseries",
             "kind": "VizConfig",
@@ -3890,7 +3646,7 @@
                     "axisBorderShow": false,
                     "axisCenteredZero": false,
                     "axisColorMode": "text",
-                    "axisLabel": "",
+                    "axisLabel": "Robots",
                     "axisPlacement": "auto",
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
@@ -3933,7 +3689,8 @@
                       }
                     ]
                   },
-                  "unit": "short"
+                  "unit": "short",
+                  "noValue": "Wiretap update needed"
                 },
                 "overrides": []
               },
@@ -4197,8 +3954,10 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "max(deriv(factorio_research_progress{force=\"player\",technology=~\".+\"}[15m]) * 360000 and on (force, technology) factorio_research_current{force=\"player\"})",
-                        "legendFormat": "Research rate"
+                        "expr": "# Research progress rate for the active technology, shown as percentage points per hour.\nmax(deriv(factorio_research_progress{force=\"player\",technology=~\".+\"}[15m]) * 360000 and on (force, technology) factorio_research_current{force=\"player\"})",
+                        "legendFormat": "Research rate",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -4210,52 +3969,18 @@
               "transformations": []
             }
           },
-          "description": "Research progress rate for the active technology, shown as percentage points per hour.",
+          "description": "",
           "id": 37,
           "links": [],
           "title": "Research rate",
           "vizConfig": {
-            "group": "timeseries",
+            "group": "stat",
             "kind": "VizConfig",
             "spec": {
               "fieldConfig": {
                 "defaults": {
                   "color": {
-                    "mode": "palette-classic"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "Research progress (%/h)",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 0,
-                    "gradientMode": "none",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "linear",
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
+                    "mode": "thresholds"
                   },
                   "thresholds": {
                     "mode": "absolute",
@@ -4263,10 +3988,6 @@
                       {
                         "color": "green",
                         "value": 0
-                      },
-                      {
-                        "color": "red",
-                        "value": 80
                       }
                     ]
                   },
@@ -4275,23 +3996,21 @@
                 "overrides": []
               },
               "options": {
-                "annotations": {
-                  "clustering": -1,
-                  "multiLane": false
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
                 },
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "enableFacetedFilter": false,
-                  "overflow": "ellipsis",
-                  "placement": "bottom",
-                  "showLegend": false
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
+                "showPercentChange": false,
+                "textMode": "auto",
+                "wideLayout": true
               }
             },
             "version": "13.3.0"
@@ -4316,9 +4035,10 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(factorio_defense_entity_count{surface=~\"$surface\"})",
-                        "legendFormat": "Structures",
-                        "instant": true
+                        "expr": "# Shows READY when every ammo turret on the selected surfaces has ammunition. A positive value is the number of empty ammo turrets.\nsum(factorio_empty_turret_count{surface=~\"$surface\"}) or vector(0)",
+                        "legendFormat": "Empty ammo turrets",
+                        "instant": true,
+                        "editorMode": "code"
                       },
                       "version": "v0"
                     },
@@ -4330,10 +4050,10 @@
               "transformations": []
             }
           },
-          "description": "Current player-force turrets, walls, and gates across selected surfaces.",
+          "description": "",
           "id": 38,
           "links": [],
-          "title": "Defense",
+          "title": "Turrets",
           "vizConfig": {
             "group": "stat",
             "kind": "VizConfig",
@@ -4346,95 +4066,30 @@
                       {
                         "color": "green",
                         "value": 0
-                      }
-                    ]
-                  },
-                  "unit": "short"
-                },
-                "overrides": []
-              },
-              "options": {
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto",
-                "percentChangeColorMode": "standard",
-                "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "fields": "",
-                  "values": false
-                },
-                "showPercentChange": false,
-                "textMode": "value",
-                "wideLayout": true
-              }
-            },
-            "version": "13.3.0"
-          }
-        }
-      },
-      "panel-39": {
-        "kind": "Panel",
-        "spec": {
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "query": {
-                      "datasource": {
-                        "name": "eftidbgh9pqm8c"
-                      },
-                      "group": "prometheus",
-                      "kind": "DataQuery",
-                      "spec": {
-                        "expr": "sum(increase(factorio_defense_damage_received_total{surface=~\"$surface\"}[15m]))",
-                        "legendFormat": "Damage",
-                        "instant": true
-                      },
-                      "version": "v0"
-                    },
-                    "refId": "A"
-                  }
-                }
-              ],
-              "queryOptions": {},
-              "transformations": []
-            }
-          },
-          "description": "Total damage received by player structures over the last 15 minutes.",
-          "id": 39,
-          "links": [],
-          "title": "Damage · 15m",
-          "vizConfig": {
-            "group": "stat",
-            "kind": "VizConfig",
-            "spec": {
-              "fieldConfig": {
-                "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      },
-                      {
-                        "color": "yellow",
-                        "value": 1
                       },
                       {
                         "color": "red",
-                        "value": 100
+                        "value": 1
                       }
                     ]
                   },
-                  "unit": "short"
+                  "unit": "short",
+                  "mappings": [
+                    {
+                      "type": "value",
+                      "options": {
+                        "0": {
+                          "text": "READY",
+                          "color": "green",
+                          "index": 0
+                        }
+                      }
+                    }
+                  ],
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "READY"
                 },
                 "overrides": []
               },
@@ -4492,7 +4147,7 @@
               "transformations": []
             }
           },
-          "description": "Trains with no route or a full destination. Requires Wiretap 1.3.0 and a Factorio restart.",
+          "description": "",
           "id": 40,
           "links": [],
           "title": "Blocked trains",
@@ -4559,8 +4214,10 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(factorio_train_moving_count{surface=~\"$surface\"})",
-                        "legendFormat": "Moving"
+                        "expr": "# Moving, waiting, and blocked player trains across selected surfaces.\nsum(factorio_train_moving_count{surface=~\"$surface\"})",
+                        "legendFormat": "Moving",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -4610,7 +4267,7 @@
               "transformations": []
             }
           },
-          "description": "Moving, waiting, and blocked player trains across selected surfaces. Requires Wiretap 1.3.0 and a Factorio restart.",
+          "description": "",
           "id": 41,
           "links": [],
           "title": "Train traffic",
@@ -4716,8 +4373,10 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (damage_type) (rate(factorio_defense_damage_received_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "{{damage_type}}"
+                        "expr": "sum by (damage_type) (rate(factorio_defense_damage_received_total{surface=~\"$surface\",attacker_force=\"enemy\"}[5m])) * 60",
+                        "legendFormat": "{{damage_type}}",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -4729,10 +4388,10 @@
               "transformations": []
             }
           },
-          "description": "Damage per second to player structures, averaged over five minutes.",
+          "description": "Damage per minute from enemy attacks that hit player-force structures, averaged over five minutes. Intercepted attacks are not included.",
           "id": 42,
           "links": [],
-          "title": "Damage received",
+          "title": "Damage reaching defenses",
           "vizConfig": {
             "group": "timeseries",
             "kind": "VizConfig",
@@ -4746,7 +4405,7 @@
                     "axisBorderShow": false,
                     "axisCenteredZero": false,
                     "axisColorMode": "text",
-                    "axisLabel": "Damage per second",
+                    "axisLabel": "Damage / min",
                     "axisPlacement": "auto",
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
@@ -4835,8 +4494,10 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(rate(factorio_defense_enemy_kills_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "Kills"
+                        "expr": "sum(rate(factorio_defense_damage_events_total{surface=~\"$surface\",attacker_force=\"enemy\"}[5m])) * 60",
+                        "legendFormat": "Hits on defenses",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -4854,12 +4515,35 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(rate(factorio_defense_player_losses_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "Structure losses"
+                        "expr": "sum(rate(factorio_defense_enemy_kills_total{surface=~\"$surface\",attacker_force=\"player\"}[5m])) * 60",
+                        "legendFormat": "Enemy kills",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
                     "refId": "B"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "eftidbgh9pqm8c"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "expr": "sum(rate(factorio_defense_player_losses_total{surface=~\"$surface\",attacker_force=\"enemy\"}[5m])) * 60",
+                        "legendFormat": "Structure losses",
+                        "editorMode": "code",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "C"
                   }
                 }
               ],
@@ -4867,10 +4551,10 @@
               "transformations": []
             }
           },
-          "description": "Enemy kills and player structure losses per second, averaged over five minutes.",
+          "description": "Five-minute rolling rates: enemy hits that reached player structures, enemy kills by the player force, and player structure losses to enemies. Hits count damage events, not attacks intercepted before impact.",
           "id": 43,
           "links": [],
-          "title": "Kills and structure losses",
+          "title": "Combat activity",
           "vizConfig": {
             "group": "timeseries",
             "kind": "VizConfig",
@@ -4884,7 +4568,7 @@
                     "axisBorderShow": false,
                     "axisCenteredZero": false,
                     "axisColorMode": "text",
-                    "axisLabel": "",
+                    "axisLabel": "Events / min",
                     "axisPlacement": "auto",
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
@@ -4973,8 +4657,10 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (item) (factorio_science_pack_consumption_per_minute{surface=~\"$surface\"})",
-                        "legendFormat": "{{item}}"
+                        "expr": "# Science-pack consumption by type, aggregated across selected surfaces.\nsum by (item) (factorio_science_pack_consumption_per_minute{surface=~\"$surface\"})",
+                        "legendFormat": "{{item}}",
+                        "editorMode": "code",
+                        "range": true
                       },
                       "version": "v0"
                     },
@@ -4986,7 +4672,7 @@
               "transformations": []
             }
           },
-          "description": "Science-pack consumption by type, aggregated across selected surfaces.",
+          "description": "",
           "id": 44,
           "links": [],
           "title": "Science packs consumed / min",
@@ -5056,6 +4742,242 @@
                   "multiLane": false
                 },
                 "legend": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "displayMode": "table",
+                  "enableFacetedFilter": false,
+                  "overflow": "ellipsis",
+                  "placement": "right",
+                  "showLegend": false
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "multi",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.3.0"
+          }
+        }
+      },
+      "panel-45": {
+        "kind": "Panel",
+        "spec": {
+          "id": 45,
+          "title": "Polluted nests",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "eftidbgh9pqm8c"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "# Enemy spawners on selected surfaces with absorbed_pollution > 0.\nsum(factorio_pollution_absorbing_nest_count{surface=~\"$surface\"})",
+                        "legendFormat": "__auto",
+                        "range": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.3.0",
+            "spec": {
+              "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "text": {},
+                "textMode": "auto",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 80,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "Zero"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-46": {
+        "kind": "Panel",
+        "spec": {
+          "id": 46,
+          "title": "Robots working",
+          "description": "Robots with an assigned first work order across the selected surfaces. Includes robots waiting on that order; sampled once per minute.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "eftidbgh9pqm8c"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(factorio_robot_order_count{force=\"player\",surface=~\"$surface\"})",
+                        "legendFormat": "Assigned work",
+                        "instant": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.3.0",
+            "spec": {
+              "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "Wiretap update needed"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-47": {
+        "kind": "Panel",
+        "spec": {
+          "id": 47,
+          "title": "Construction robot work",
+          "description": "Robots grouped by the first assigned construction order. Includes robots waiting on that order; sampled once per minute. Requires the updated Wiretap mod and bridge.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "eftidbgh9pqm8c"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (order_type) (factorio_robot_order_count{force=\"player\",kind=\"construction\",surface=~\"$surface\"})",
+                        "legendFormat": "{{order_type}}",
+                        "range": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.3.0",
+            "spec": {
+              "options": {
+                "annotations": {
+                  "clustering": -1,
+                  "multiLane": false
+                },
+                "legend": {
                   "calcs": [],
                   "displayMode": "list",
                   "enableFacetedFilter": false,
@@ -5068,9 +4990,147 @@
                   "mode": "single",
                   "sort": "none"
                 }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 80,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "noValue": "Wiretap update needed",
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "Robots",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  }
+                },
+                "overrides": []
               }
-            },
-            "version": "13.3.0"
+            }
+          }
+        }
+      },
+      "panel-48": {
+        "kind": "Panel",
+        "spec": {
+          "id": 48,
+          "title": "Robots waiting to charge",
+          "description": "Robots queued for a charging slot across the selected surfaces.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "eftidbgh9pqm8c"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum(factorio_robot_waiting_for_charge_count{force=\"player\",surface=~\"$surface\"})",
+                        "legendFormat": "Waiting",
+                        "instant": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.3.0",
+            "spec": {
+              "options": {
+                "colorMode": "value",
+                "graphMode": "none",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "percentChangeColorMode": "standard",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "showPercentChange": false,
+                "textMode": "value",
+                "wideLayout": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "thresholds"
+                  },
+                  "noValue": "Wiretap update needed"
+                },
+                "overrides": []
+              }
+            }
           }
         }
       }
@@ -5096,7 +5156,20 @@
                         },
                         "x": 0,
                         "y": 0,
-                        "width": 12,
+                        "width": 6,
+                        "height": 3
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-40"
+                        },
+                        "x": 6,
+                        "y": 0,
+                        "width": 6,
                         "height": 3
                       }
                     },
@@ -5118,24 +5191,11 @@
                       "spec": {
                         "element": {
                           "kind": "ElementReference",
-                          "name": "panel-37"
-                        },
-                        "x": 0,
-                        "y": 17,
-                        "width": 12,
-                        "height": 7
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "element": {
-                          "kind": "ElementReference",
                           "name": "panel-38"
                         },
                         "x": 0,
                         "y": 3,
-                        "width": 12,
+                        "width": 4,
                         "height": 3
                       }
                     },
@@ -5144,11 +5204,11 @@
                       "spec": {
                         "element": {
                           "kind": "ElementReference",
-                          "name": "panel-39"
+                          "name": "panel-46"
                         },
-                        "x": 12,
+                        "x": 4,
                         "y": 3,
-                        "width": 12,
+                        "width": 6,
                         "height": 3
                       }
                     },
@@ -5157,11 +5217,11 @@
                       "spec": {
                         "element": {
                           "kind": "ElementReference",
-                          "name": "panel-40"
+                          "name": "panel-48"
                         },
-                        "x": 12,
-                        "y": 6,
-                        "width": 12,
+                        "x": 10,
+                        "y": 3,
+                        "width": 6,
                         "height": 3
                       }
                     },
@@ -5170,51 +5230,12 @@
                       "spec": {
                         "element": {
                           "kind": "ElementReference",
-                          "name": "panel-4"
+                          "name": "panel-37"
                         },
-                        "x": 0,
-                        "y": 9,
-                        "width": 24,
-                        "height": 8
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-42"
-                        },
-                        "x": 0,
-                        "y": 24,
-                        "width": 12,
-                        "height": 6
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-41"
-                        },
-                        "x": 12,
-                        "y": 24,
-                        "width": 12,
-                        "height": 6
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "element": {
-                          "kind": "ElementReference",
-                          "name": "panel-43"
-                        },
-                        "x": 0,
-                        "y": 30,
-                        "width": 24,
-                        "height": 6
+                        "x": 16,
+                        "y": 3,
+                        "width": 8,
+                        "height": 3
                       }
                     },
                     {
@@ -5235,12 +5256,77 @@
                       "spec": {
                         "element": {
                           "kind": "ElementReference",
+                          "name": "panel-45"
+                        },
+                        "x": 19,
+                        "y": 6,
+                        "width": 5,
+                        "height": 3
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-4"
+                        },
+                        "x": 0,
+                        "y": 9,
+                        "width": 24,
+                        "height": 4
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
                           "name": "panel-44"
                         },
-                        "x": 12,
-                        "y": 17,
-                        "width": 12,
+                        "x": 0,
+                        "y": 13,
+                        "width": 24,
                         "height": 7
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-42"
+                        },
+                        "x": 0,
+                        "y": 20,
+                        "width": 12,
+                        "height": 6
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-41"
+                        },
+                        "x": 12,
+                        "y": 20,
+                        "width": 12,
+                        "height": 6
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-43"
+                        },
+                        "x": 0,
+                        "y": 26,
+                        "width": 24,
+                        "height": 6
                       }
                     }
                   ]
@@ -5668,7 +5754,20 @@
                         },
                         "x": 12,
                         "y": 8,
-                        "width": 12,
+                        "width": 6,
+                        "height": 8
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-47"
+                        },
+                        "x": 18,
+                        "y": 8,
+                        "width": 6,
                         "height": 8
                       }
                     },

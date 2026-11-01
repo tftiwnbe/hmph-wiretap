@@ -23,9 +23,26 @@
 --  * on_load may only read `storage`, so the export interval is mirrored
 --    into storage for timer re-registration on load.
 
-local MOD_VERSION = "1.3.3"
+local MOD_VERSION = "1.3.4"
 local SETTING_PREFIX = "wiretap-"
 local PRECISION = defines.flow_precision_index.five_seconds
+local ROBOT_ORDER_SAMPLE_INTERVAL_TICKS = 60 * 60
+
+local robot_order_kind_by_name = {
+  pickup = "logistic",
+  deliver = "logistic",
+  pickup_items = "logistic",
+  deliver_items = "logistic",
+  construct = "construction",
+  repair = "construction",
+  deconstruct = "construction",
+  upgrade = "construction",
+  explode_cliff = "construction",
+}
+local robot_order_name_by_value = {}
+for name, value in pairs(defines.robot_order_type) do
+  robot_order_name_by_value[value] = name
+end
 
 local function cfg(name)
   return settings.global[SETTING_PREFIX .. name].value
@@ -311,6 +328,7 @@ end
 
 local function collect_logistics(surface, quality_breakdown)
   local out = {}
+  local cached_orders_by_force = (storage.robot_order_counts or {})[surface.name] or {}
   for _, force in pairs(game.forces) do
     local nets = force.logistic_networks[surface.name]
     if nets and #nets > 0 then
@@ -320,6 +338,7 @@ local function collect_logistics(surface, quality_breakdown)
         logistic_available = 0,
         construction_total = 0,
         construction_available = 0,
+        waiting_for_charge = 0,
       }
       for _, net in pairs(nets) do
         for _, entry in pairs(net.get_contents()) do
@@ -333,10 +352,14 @@ local function collect_logistics(surface, quality_breakdown)
         robots.logistic_available = robots.logistic_available + net.available_logistic_robots
         robots.construction_total = robots.construction_total + net.all_construction_robots
         robots.construction_available = robots.construction_available + net.available_construction_robots
+        for _, cell in pairs(net.cells) do
+          robots.waiting_for_charge = robots.waiting_for_charge + cell.to_charge_robot_count
+        end
       end
       local entry = {
         network_count = #nets,
         robots = robots,
+        robot_orders = cached_orders_by_force[force.name] or {},
         items = nonempty(items),
       }
       if quality_breakdown then
@@ -346,6 +369,51 @@ local function collect_logistics(surface, quality_breakdown)
     end
   end
   return nonempty(out)
+end
+
+local function count_robot_orders(robots, kind, counts)
+  for _, robot in pairs(robots) do
+    if robot.valid then
+      local ok, queue = pcall(function() return robot.robot_order_queue end)
+      local order = ok and queue and queue[1]
+      local name = order and robot_order_name_by_value[order.type]
+      if name and robot_order_kind_by_name[name] == kind then
+        counts[kind][name] = counts[kind][name] + 1
+      end
+    end
+  end
+end
+
+local function sample_robot_orders()
+  local by_surface = {}
+  for _, surface in pairs(game.surfaces) do
+    local by_force = {}
+    for _, force in pairs(game.forces) do
+      local nets = force.logistic_networks[surface.name]
+      if nets and #nets > 0 then
+        local counts = {logistic = {}, construction = {}}
+        for name, kind in pairs(robot_order_kind_by_name) do
+          counts[kind][name] = 0
+        end
+        for _, net in pairs(nets) do
+          count_robot_orders(net.logistic_robots, "logistic", counts)
+          count_robot_orders(net.construction_robots, "construction", counts)
+        end
+        by_force[force.name] = counts
+      end
+    end
+    if next(by_force) then by_surface[surface.name] = by_force end
+  end
+  storage.robot_order_counts = by_surface
+  storage.robot_order_sample_tick = game.tick
+end
+
+local function refresh_robot_order_counts()
+  local last_sample = storage.robot_order_sample_tick
+  if not last_sample or game.tick < last_sample
+      or game.tick - last_sample >= ROBOT_ORDER_SAMPLE_INTERVAL_TICKS then
+    sample_robot_orders()
+  end
 end
 
 -- --------------------------------------------------------------------------
@@ -493,6 +561,8 @@ local function build_snapshot()
     players[#players + 1] = player.name
   end
 
+  if include_logistics then refresh_robot_order_counts() end
+
   local surfaces = {}
   for _, surface in pairs(game.surfaces) do
     local s = {
@@ -542,6 +612,9 @@ local function build_snapshot()
       player_count = #game.connected_players,
       players_online = nonempty(players),
       interval_seconds = cfg("interval-seconds"),
+      robot_order_sample_interval_seconds = ROBOT_ORDER_SAMPLE_INTERVAL_TICKS / 60,
+      robot_order_sample_age_seconds = storage.robot_order_sample_tick
+          and math.floor((game.tick - storage.robot_order_sample_tick) / 60) or nil,
     },
     surfaces = surfaces,
     forces = collect_forces(include_production, include_science),
