@@ -9,8 +9,6 @@ on:
 jobs:
   package:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -66,8 +64,6 @@ jobs:
     needs: package
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -78,8 +74,10 @@ jobs:
           test "${GITHUB_REF_NAME}" = "v${version}"
 
       - name: Create Forgejo release and upload ZIP
+        # Forgejo's automatic token is repository-scoped and can create releases
+        # on trusted push/tag runs; GitHub-style `permissions:` is unsupported.
         env:
-          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
         run: |
           set -euo pipefail
           version="$(python3 -c "import json; print(json.load(open('mod/hmph-wiretap/info.json'))['version'])")"

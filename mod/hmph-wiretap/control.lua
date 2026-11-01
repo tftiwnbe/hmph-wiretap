@@ -23,7 +23,7 @@
 --  * on_load may only read `storage`, so the export interval is mirrored
 --    into storage for timer re-registration on load.
 
-local MOD_VERSION = "1.3.0"
+local MOD_VERSION = "1.3.2"
 local SETTING_PREFIX = "wiretap-"
 local PRECISION = defines.flow_precision_index.five_seconds
 
