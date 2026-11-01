@@ -141,7 +141,7 @@
               "transformations": []
             }
           },
-          "description": "Instant value for the player force\u2019s active research. No value means research is currently idle.",
+          "description": "Instant value for the player force’s active research. No value means research is currently idle.",
           "id": 2,
           "links": [],
           "title": "Current research progress",
@@ -301,8 +301,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "factorio_power_production_watts{surface=~\"$surface\"} - factorio_power_consumption_watts{surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}}"
+                        "expr": "sum(factorio_power_production_watts{surface=~\"$surface\"}) - sum(factorio_power_consumption_watts{surface=~\"$surface\"})",
+                        "legendFormat": "Power margin"
                       },
                       "version": "v0"
                     },
@@ -314,7 +314,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 4,
           "links": [],
           "title": "Power margin",
@@ -500,8 +500,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "factorio_power_production_watts{surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}} production"
+                        "expr": "sum(factorio_power_production_watts{surface=~\"$surface\"})",
+                        "legendFormat": "Production"
                       },
                       "version": "v0"
                     },
@@ -519,8 +519,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "factorio_power_consumption_watts{surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}} consumption"
+                        "expr": "sum(factorio_power_consumption_watts{surface=~\"$surface\"})",
+                        "legendFormat": "Consumption"
                       },
                       "version": "v0"
                     },
@@ -532,7 +532,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 6,
           "links": [],
           "title": "Power generation and draw",
@@ -776,8 +776,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, entity) (factorio_power_production_by_entity_watts{surface=~\"$surface\"})",
-                        "legendFormat": "{{surface}} \u00b7 {{entity}}"
+                        "expr": "sum by (entity) (factorio_power_production_by_entity_watts{surface=~\"$surface\"})",
+                        "legendFormat": "{{entity}}"
                       },
                       "version": "v0"
                     },
@@ -789,7 +789,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 8,
           "links": [],
           "title": "Generation by entity",
@@ -895,8 +895,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, entity) (factorio_power_consumption_by_entity_watts{surface=~\"$surface\"})",
-                        "legendFormat": "{{surface}} \u00b7 {{entity}}"
+                        "expr": "sum by (entity) (factorio_power_consumption_by_entity_watts{surface=~\"$surface\"})",
+                        "legendFormat": "{{entity}}"
                       },
                       "version": "v0"
                     },
@@ -908,7 +908,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 9,
           "links": [],
           "title": "Consumption by entity",
@@ -1014,8 +1014,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "100 * sum by (surface) (factorio_accumulator_charge_joules{surface=~\"$surface\"}) / sum by (surface) (factorio_accumulator_capacity_joules{surface=~\"$surface\"})",
-                        "legendFormat": "{{surface}}"
+                        "expr": "100 * sum(factorio_accumulator_charge_joules{surface=~\"$surface\"}) / sum(factorio_accumulator_capacity_joules{surface=~\"$surface\"})",
+                        "legendFormat": "Charge"
                       },
                       "version": "v0"
                     },
@@ -1027,7 +1027,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 10,
           "links": [],
           "title": "Accumulator charge",
@@ -1107,8 +1107,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "factorio_electric_network_count{surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}}"
+                        "expr": "sum(factorio_electric_network_count{surface=~\"$surface\"})",
+                        "legendFormat": "Networks"
                       },
                       "version": "v0"
                     },
@@ -1120,7 +1120,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 11,
           "links": [],
           "title": "Electric networks",
@@ -1226,8 +1226,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, entity) (factorio_entity_count{surface=~\"$surface\"})",
-                        "legendFormat": "{{surface}} \u00b7 {{entity}}"
+                        "expr": "sum by (entity) (factorio_entity_count{surface=~\"$surface\"})",
+                        "legendFormat": "{{entity}}"
                       },
                       "version": "v0"
                     },
@@ -1239,7 +1239,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 12,
           "links": [],
           "title": "Power entity counts",
@@ -1345,8 +1345,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "factorio_pollution{surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}}"
+                        "expr": "sum(factorio_pollution{surface=~\"$surface\"})",
+                        "legendFormat": "Pollution"
                       },
                       "version": "v0"
                     },
@@ -1358,7 +1358,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 13,
           "links": [],
           "title": "Pollution stock",
@@ -1464,8 +1464,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, source) (rate(factorio_pollution_produced_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "{{surface}} \u00b7 {{source}}"
+                        "expr": "sum by (source) (rate(factorio_pollution_produced_total{surface=~\"$surface\"}[5m]))",
+                        "legendFormat": "{{source}}"
                       },
                       "version": "v0"
                     },
@@ -1477,7 +1477,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 14,
           "links": [],
           "title": "Pollution produced by source",
@@ -1583,8 +1583,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, source) (rate(factorio_pollution_absorbed_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "{{surface}} \u00b7 {{source}}"
+                        "expr": "sum by (source) (rate(factorio_pollution_absorbed_total{surface=~\"$surface\"}[5m]))",
+                        "legendFormat": "{{source}}"
                       },
                       "version": "v0"
                     },
@@ -1596,7 +1596,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 15,
           "links": [],
           "title": "Pollution absorbed by source",
@@ -1702,8 +1702,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface) (rate(factorio_pollution_produced_total{surface=~\"$surface\"}[5m])) - sum by (surface) (rate(factorio_pollution_absorbed_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "{{surface}} net"
+                        "expr": "sum(rate(factorio_pollution_produced_total{surface=~\"$surface\"}[5m])) - sum(rate(factorio_pollution_absorbed_total{surface=~\"$surface\"}[5m]))",
+                        "legendFormat": "Net"
                       },
                       "version": "v0"
                     },
@@ -1715,7 +1715,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 16,
           "links": [],
           "title": "Net pollution rate",
@@ -1821,8 +1821,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "100 * factorio_evolution_factor{force=\"enemy\",surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}} total"
+                        "expr": "max(100 * factorio_evolution_factor{force=\"enemy\",surface=~\"$surface\"})",
+                        "legendFormat": "Max evolution"
                       },
                       "version": "v0"
                     },
@@ -1834,7 +1834,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 17,
           "links": [],
           "title": "Evolution",
@@ -1940,8 +1940,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "100 * factorio_evolution_component{force=\"enemy\",surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}} \u00b7 {{component}}"
+                        "expr": "max by (component) (100 * factorio_evolution_component{force=\"enemy\",surface=~\"$surface\"})",
+                        "legendFormat": "{{component}}"
                       },
                       "version": "v0"
                     },
@@ -1953,7 +1953,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Highest contribution per evolution component across the selected surfaces.",
           "id": 18,
           "links": [],
           "title": "Evolution contributors",
@@ -2059,8 +2059,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, entity) (factorio_defense_entity_count{surface=~\"$surface\"})",
-                        "legendFormat": "{{surface}} \u00b7 {{entity}}"
+                        "expr": "sum by (entity) (factorio_defense_entity_count{surface=~\"$surface\"})",
+                        "legendFormat": "{{entity}}"
                       },
                       "version": "v0"
                     },
@@ -2072,7 +2072,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 19,
           "links": [],
           "title": "Defensive structures",
@@ -2178,8 +2178,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "factorio_loaded_turret_count{surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}} loaded"
+                        "expr": "sum(factorio_loaded_turret_count{surface=~\"$surface\"})",
+                        "legendFormat": "Loaded"
                       },
                       "version": "v0"
                     },
@@ -2197,8 +2197,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "factorio_empty_turret_count{surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}} empty"
+                        "expr": "sum(factorio_empty_turret_count{surface=~\"$surface\"})",
+                        "legendFormat": "Empty"
                       },
                       "version": "v0"
                     },
@@ -2210,7 +2210,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 20,
           "links": [],
           "title": "Ammo turrets loaded",
@@ -2316,8 +2316,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, item) (factorio_defense_ammo_count{surface=~\"$surface\"})",
-                        "legendFormat": "{{surface}} \u00b7 {{item}}"
+                        "expr": "sum by (item) (factorio_defense_ammo_count{surface=~\"$surface\"})",
+                        "legendFormat": "{{item}}"
                       },
                       "version": "v0"
                     },
@@ -2329,7 +2329,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 21,
           "links": [],
           "title": "Ammo available",
@@ -2435,8 +2435,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, entity, damage_type) (rate(factorio_defense_damage_received_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "{{surface}} \u00b7 {{entity}} \u00b7 {{damage_type}}"
+                        "expr": "sum by (entity, damage_type) (rate(factorio_defense_damage_received_total{surface=~\"$surface\"}[5m]))",
+                        "legendFormat": "{{entity}} · {{damage_type}}"
                       },
                       "version": "v0"
                     },
@@ -2448,7 +2448,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 22,
           "links": [],
           "title": "Damage to player structures by type",
@@ -2554,8 +2554,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, entity, damage_type) (rate(factorio_defense_damage_events_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "{{surface}} \u00b7 {{entity}} \u00b7 {{damage_type}}"
+                        "expr": "sum by (entity, damage_type) (rate(factorio_defense_damage_events_total{surface=~\"$surface\"}[5m]))",
+                        "legendFormat": "{{entity}} · {{damage_type}}"
                       },
                       "version": "v0"
                     },
@@ -2567,7 +2567,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 23,
           "links": [],
           "title": "Damage events to player structures",
@@ -2673,8 +2673,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, entity) (rate(factorio_defense_enemy_kills_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "{{surface}} kills \u00b7 {{entity}}"
+                        "expr": "sum by (entity) (rate(factorio_defense_enemy_kills_total{surface=~\"$surface\"}[5m]))",
+                        "legendFormat": "Kills · {{entity}}"
                       },
                       "version": "v0"
                     },
@@ -2692,8 +2692,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, entity) (rate(factorio_defense_player_losses_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "{{surface}} losses \u00b7 {{entity}}"
+                        "expr": "sum by (entity) (rate(factorio_defense_player_losses_total{surface=~\"$surface\"}[5m]))",
+                        "legendFormat": "Losses · {{entity}}"
                       },
                       "version": "v0"
                     },
@@ -2705,7 +2705,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 24,
           "links": [],
           "title": "Enemy kills and player structure losses",
@@ -3862,8 +3862,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "factorio_robots{state=~\"available|total\",surface=~\"$surface\"}",
-                        "legendFormat": "{{surface}} \u00b7 {{force}} \u00b7 {{kind}} \u00b7 {{state}}"
+                        "expr": "sum by (force, kind, state) (factorio_robots{state=~\"available|total\",surface=~\"$surface\"})",
+                        "legendFormat": "{{force}} · {{kind}} · {{state}}"
                       },
                       "version": "v0"
                     },
@@ -3875,7 +3875,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 34,
           "links": [],
           "title": "Robots available and deployed",
@@ -3981,8 +3981,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (surface, force, item) (factorio_logistic_item_count{surface=~\"$surface\"})",
-                        "legendFormat": "{{surface}} \u00b7 {{item}}"
+                        "expr": "sum by (force, item) (factorio_logistic_item_count{surface=~\"$surface\"})",
+                        "legendFormat": "{{item}}"
                       },
                       "version": "v0"
                     },
@@ -3994,7 +3994,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Aggregated across surfaces selected by the Surface filter.",
           "id": 35,
           "links": [],
           "title": "Logistic network item stock",
