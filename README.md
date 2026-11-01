@@ -308,6 +308,9 @@ scrape_configs:
 ```
 
 Useful series: `factorio_power_production_watts{surface=…}`,
+`factorio_power_headroom_watts{surface=…}` (maximum generation minus maximum load),
+`factorio_power_maximum_production_watts{surface=…}`,
+`factorio_power_maximum_consumption_watts{surface=…}`,
 `factorio_logistic_item_count{item=…}`, `factorio_accumulator_charge_joules`,
 `factorio_entity_count{surface=…,entity=…}` (divide watts by it for per-machine
 utilization),

@@ -23,7 +23,7 @@
 --  * on_load may only read `storage`, so the export interval is mirrored
 --    into storage for timer re-registration on load.
 
-local MOD_VERSION = "1.3.2"
+local MOD_VERSION = "1.3.3"
 local SETTING_PREFIX = "wiretap-"
 local PRECISION = defines.flow_precision_index.five_seconds
 
@@ -148,16 +148,22 @@ local function collect_power(surface, include_breakdown, include_accumulators)
   -- enumeration is skipped: any pole there joins the same global network
   -- and would double-count.
   local reps = {} -- network key (string) -> statistics object
+  local network_refs = {} -- network key (string) -> electric sub-network
   local ok_g, has_global = pcall(function() return surface.has_global_electric_network end)
   local is_global = ok_g and has_global or false
   if is_global then
     local ok_s, gstats = pcall(function() return surface.global_electric_network_statistics end)
     if ok_s and gstats then reps["global"] = gstats end
+    local ok_n, network = pcall(function() return surface.global_electric_network end)
+    if ok_n and network then network_refs["global"] = network end
   else
     for _, pole in pairs(surface.find_entities_filtered{type = "electric-pole"}) do
       local id = pole.electric_network_id
       if id and not reps[tostring(id)] then
-        reps[tostring(id)] = pole.electric_network_statistics
+        local key = tostring(id)
+        reps[key] = pole.electric_network_statistics
+        local ok_n, network = pcall(function() return pole.electric_network end)
+        if ok_n and network then network_refs[key] = network end
       end
     end
   end
@@ -174,6 +180,7 @@ local function collect_power(surface, include_breakdown, include_accumulators)
     accumulator_capacity_joules = 0,
     network_count = 0,
   }
+  local capacity_network_count = 0
   local networks = {}
   local seen_names = include_breakdown and {} or nil
 
@@ -201,6 +208,28 @@ local function collect_power(surface, include_breakdown, include_accumulators)
       accumulator_charge_joules = 0,
       accumulator_capacity_joules = 0,
     }
+    local network = network_refs[key]
+    if network then
+      -- flow_last_tick is exposed by the parent electric network. Its
+      -- maximum_production/maximum_consumption values are per-tick energy,
+      -- like the flow statistics above, so convert to watts with * 60.
+      local ok_capacity, maximum_production, maximum_consumption = pcall(function()
+        local flow = network.parent_network.flow_last_tick
+        return flow.maximum_production, flow.maximum_consumption
+      end)
+      if ok_capacity and type(maximum_production) == "number"
+          and type(maximum_consumption) == "number" then
+        maximum_production = maximum_production * 60
+        maximum_consumption = maximum_consumption * 60
+        net.maximum_production_watts = maximum_production
+        net.maximum_consumption_watts = maximum_consumption
+        totals.maximum_production_watts =
+          (totals.maximum_production_watts or 0) + maximum_production
+        totals.maximum_consumption_watts =
+          (totals.maximum_consumption_watts or 0) + maximum_consumption
+        capacity_network_count = capacity_network_count + 1
+      end
+    end
     if include_breakdown then
       net.production_by_entity = nonempty(prod_by)
       net.consumption_by_entity = nonempty(cons_by)
@@ -209,6 +238,11 @@ local function collect_power(surface, include_breakdown, include_accumulators)
 
     totals.production_watts = totals.production_watts + production
     totals.consumption_watts = totals.consumption_watts + consumption
+  end
+
+  if capacity_network_count == 0 then
+    totals.maximum_production_watts = nil
+    totals.maximum_consumption_watts = nil
   end
 
   if include_accumulators then
@@ -243,6 +277,8 @@ local function collect_power(surface, include_breakdown, include_accumulators)
   -- Drop dead networks (isolated poles): nothing flowing, nothing stored.
   for key, net in pairs(networks) do
     if net.production_watts == 0 and net.consumption_watts == 0
+        and (net.maximum_production_watts or 0) == 0
+        and (net.maximum_consumption_watts or 0) == 0
         and net.accumulator_capacity_joules == 0 then
       networks[key] = nil
     end

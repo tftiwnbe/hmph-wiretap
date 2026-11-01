@@ -295,8 +295,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(factorio_power_production_watts{surface=~\"$surface\"}) - sum(factorio_power_consumption_watts{surface=~\"$surface\"})",
-                        "legendFormat": "Power margin"
+                        "expr": "sum(factorio_power_headroom_watts{surface=~\"$surface\"})",
+                        "legendFormat": "Power headroom"
                       },
                       "version": "v0"
                     },
@@ -308,10 +308,10 @@
               "transformations": []
             }
           },
-          "description": "Aggregated across surfaces selected by the Surface filter.",
+          "description": "Maximum generation minus maximum load across selected surfaces. Negative means available generation cannot meet maximum demand.",
           "id": 4,
           "links": [],
-          "title": "Power margin",
+          "title": "Power headroom",
           "vizConfig": {
             "group": "stat",
             "kind": "VizConfig",
@@ -322,12 +322,16 @@
                     "mode": "absolute",
                     "steps": [
                       {
-                        "color": "green",
+                        "color": "red",
+                        "value": null
+                      },
+                      {
+                        "color": "orange",
                         "value": 0
                       },
                       {
-                        "color": "red",
-                        "value": 80
+                        "color": "green",
+                        "value": 1000000
                       }
                     ]
                   },

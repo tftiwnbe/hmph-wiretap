@@ -170,17 +170,26 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
         for key, metric in (
             ("production_watts", "power_production_watts"),
             ("consumption_watts", "power_consumption_watts"),
+            ("maximum_production_watts", "power_maximum_production_watts"),
+            ("maximum_consumption_watts", "power_maximum_consumption_watts"),
             ("accumulator_charge_joules", "accumulator_charge_joules"),
             ("accumulator_capacity_joules", "accumulator_capacity_joules"),
             ("network_count", "electric_network_count"),
         ):
             if key in totals:
                 emit(metric, s, totals[key])
+        if ("maximum_production_watts" in totals
+                and "maximum_consumption_watts" in totals):
+            emit("power_headroom_watts", s,
+                 totals["maximum_production_watts"]
+                 - totals["maximum_consumption_watts"])
         for nid, net in _d(power.get("networks")).items():
             ns = {"surface": sname, "network": str(nid)}
             for key, metric in (
                 ("production_watts", "network_production_watts"),
                 ("consumption_watts", "network_consumption_watts"),
+                ("maximum_production_watts", "network_maximum_production_watts"),
+                ("maximum_consumption_watts", "network_maximum_consumption_watts"),
                 ("accumulator_charge_joules", "network_accumulator_charge_joules"),
                 ("accumulator_capacity_joules", "network_accumulator_capacity_joules"),
             ):
