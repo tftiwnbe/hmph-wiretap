@@ -349,7 +349,7 @@
                   "values": false
                 },
                 "showPercentChange": false,
-                "textMode": "auto",
+                "textMode": "none",
                 "wideLayout": true
               }
             },
@@ -4193,9 +4193,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "deriv(factorio_research_progress{force=\"player\",technology=~\".+\"}[15m]) * 360000",
-                        "legendFormat": "Research rate",
-                        "instant": true
+                        "expr": "max(deriv(factorio_research_progress{force=\"player\",technology=~\".+\"}[15m]) * 360000 and on (force, technology) factorio_research_current{force=\"player\"})",
+                        "legendFormat": "Research rate"
                       },
                       "version": "v0"
                     },
@@ -4207,22 +4206,63 @@
               "transformations": []
             }
           },
-          "description": "Progress rate over the last 15 minutes, shown as percentage points per hour.",
+          "description": "Research progress rate for the active technology, shown as percentage points per hour.",
           "id": 37,
           "links": [],
           "title": "Research rate",
           "vizConfig": {
-            "group": "stat",
+            "group": "timeseries",
             "kind": "VizConfig",
             "spec": {
               "fieldConfig": {
                 "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "Research progress (%/h)",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
                       {
                         "color": "green",
                         "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
                       }
                     ]
                   },
@@ -4231,21 +4271,23 @@
                 "overrides": []
               },
               "options": {
-                "colorMode": "value",
-                "graphMode": "none",
-                "justifyMode": "auto",
-                "orientation": "auto",
-                "percentChangeColorMode": "standard",
-                "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "fields": "",
-                  "values": false
+                "annotations": {
+                  "clustering": -1,
+                  "multiLane": false
                 },
-                "showPercentChange": false,
-                "textMode": "value",
-                "wideLayout": true
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "overflow": "ellipsis",
+                  "placement": "bottom",
+                  "showLegend": false
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
               }
             },
             "version": "13.3.0"
@@ -4670,8 +4712,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (entity, damage_type) (rate(factorio_defense_damage_received_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "{{entity}} · {{damage_type}}"
+                        "expr": "sum by (damage_type) (rate(factorio_defense_damage_received_total{surface=~\"$surface\"}[5m]))",
+                        "legendFormat": "{{damage_type}}"
                       },
                       "version": "v0"
                     },
@@ -4789,8 +4831,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (entity) (rate(factorio_defense_enemy_kills_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "Kills · {{entity}}"
+                        "expr": "sum(rate(factorio_defense_enemy_kills_total{surface=~\"$surface\"}[5m]))",
+                        "legendFormat": "Kills"
                       },
                       "version": "v0"
                     },
@@ -4808,8 +4850,8 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (entity) (rate(factorio_defense_player_losses_total{surface=~\"$surface\"}[5m]))",
-                        "legendFormat": "Losses · {{entity}}"
+                        "expr": "sum(rate(factorio_defense_player_losses_total{surface=~\"$surface\"}[5m]))",
+                        "legendFormat": "Structure losses"
                       },
                       "version": "v0"
                     },
@@ -4908,6 +4950,125 @@
             "version": "13.3.0"
           }
         }
+      },
+      "panel-44": {
+        "kind": "Panel",
+        "spec": {
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "eftidbgh9pqm8c"
+                      },
+                      "group": "prometheus",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "expr": "sum by (item) (factorio_science_pack_consumption_per_minute{surface=~\"$surface\"})",
+                        "legendFormat": "{{item}}"
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "A"
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "description": "Science-pack consumption by type, aggregated across selected surfaces.",
+          "id": 44,
+          "links": [],
+          "title": "Science packs consumed / min",
+          "vizConfig": {
+            "group": "timeseries",
+            "kind": "VizConfig",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "color": {
+                    "mode": "palette-classic"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "Packs per minute",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 0,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "auto",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": 0
+                      },
+                      {
+                        "color": "red",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {
+                "annotations": {
+                  "clustering": -1,
+                  "multiLane": false
+                },
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "overflow": "ellipsis",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              }
+            },
+            "version": "13.3.0"
+          }
+        }
       }
     },
     "layout": {
@@ -4931,8 +5092,8 @@
                         },
                         "x": 0,
                         "y": 0,
-                        "width": 4,
-                        "height": 4
+                        "width": 12,
+                        "height": 3
                       }
                     },
                     {
@@ -4942,10 +5103,10 @@
                           "kind": "ElementReference",
                           "name": "panel-2"
                         },
-                        "x": 4,
+                        "x": 12,
                         "y": 0,
-                        "width": 4,
-                        "height": 4
+                        "width": 12,
+                        "height": 3
                       }
                     },
                     {
@@ -4955,10 +5116,10 @@
                           "kind": "ElementReference",
                           "name": "panel-37"
                         },
-                        "x": 8,
-                        "y": 0,
-                        "width": 4,
-                        "height": 4
+                        "x": 0,
+                        "y": 17,
+                        "width": 12,
+                        "height": 7
                       }
                     },
                     {
@@ -4968,10 +5129,10 @@
                           "kind": "ElementReference",
                           "name": "panel-38"
                         },
-                        "x": 12,
-                        "y": 0,
-                        "width": 4,
-                        "height": 4
+                        "x": 0,
+                        "y": 3,
+                        "width": 12,
+                        "height": 3
                       }
                     },
                     {
@@ -4981,10 +5142,10 @@
                           "kind": "ElementReference",
                           "name": "panel-39"
                         },
-                        "x": 16,
-                        "y": 0,
-                        "width": 4,
-                        "height": 4
+                        "x": 12,
+                        "y": 3,
+                        "width": 12,
+                        "height": 3
                       }
                     },
                     {
@@ -4994,10 +5155,10 @@
                           "kind": "ElementReference",
                           "name": "panel-40"
                         },
-                        "x": 20,
-                        "y": 0,
-                        "width": 4,
-                        "height": 4
+                        "x": 12,
+                        "y": 6,
+                        "width": 12,
+                        "height": 3
                       }
                     },
                     {
@@ -5008,7 +5169,7 @@
                           "name": "panel-4"
                         },
                         "x": 0,
-                        "y": 4,
+                        "y": 9,
                         "width": 24,
                         "height": 8
                       }
@@ -5021,7 +5182,7 @@
                           "name": "panel-42"
                         },
                         "x": 0,
-                        "y": 12,
+                        "y": 24,
                         "width": 12,
                         "height": 6
                       }
@@ -5034,7 +5195,7 @@
                           "name": "panel-41"
                         },
                         "x": 12,
-                        "y": 12,
+                        "y": 24,
                         "width": 12,
                         "height": 6
                       }
@@ -5047,8 +5208,8 @@
                           "name": "panel-43"
                         },
                         "x": 0,
-                        "y": 18,
-                        "width": 12,
+                        "y": 30,
+                        "width": 24,
                         "height": 6
                       }
                     },
@@ -5059,10 +5220,23 @@
                           "kind": "ElementReference",
                           "name": "panel-3"
                         },
-                        "x": 12,
-                        "y": 18,
+                        "x": 0,
+                        "y": 6,
                         "width": 12,
-                        "height": 6
+                        "height": 3
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-44"
+                        },
+                        "x": 12,
+                        "y": 17,
+                        "width": 12,
+                        "height": 7
                       }
                     }
                   ]

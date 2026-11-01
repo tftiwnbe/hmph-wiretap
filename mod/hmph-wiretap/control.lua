@@ -468,6 +468,13 @@ local function build_snapshot()
       local pstats = surface.pollution_statistics
       s.pollution_produced_total = nonempty(pstats.input_counts)
       s.pollution_absorbed_total = nonempty(pstats.output_counts)
+      local absorbing_nests = 0
+      for _, nest in pairs(surface.find_entities_filtered{type = "unit-spawner", force = "enemy"}) do
+        if nest.absorbed_pollution > 0 then
+          absorbing_nests = absorbing_nests + 1
+        end
+      end
+      s.pollution_absorbing_nest_count = absorbing_nests
     end
     if include_power then
       s.power = collect_power(surface, power_breakdown, include_accumulators)

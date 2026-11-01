@@ -47,7 +47,8 @@ Per **surface** (every planet, moon, and space platform is a surface):
 - **Logistics, per force**: item counts aggregated across all logistic networks
   (optionally broken down by quality), robot counts (logistic/construction,
   total/available), network count.
-- **Pollution**: total on the surface, plus cumulative produced/absorbed by source.
+- **Pollution**: total on the surface, cumulative produced/absorbed by source, and the
+  count of enemy spawners whose `absorbed_pollution` value is above zero.
 - **Defense**: player-force turrets, walls, and gates by entity; loaded/empty ammo turrets and
   ammunition by item; cumulative damage and hit events received by player-force entities;
   enemy kills and player entity losses. Damage/death counters include surface, entity, damage
@@ -319,3 +320,5 @@ the mod is disabled). Train telemetry is available as `factorio_train_count`,
 `factorio_train_moving_count`, `factorio_train_waiting_count`,
 `factorio_train_blocked_count`, `factorio_train_manual_count`,
 `factorio_train_stop_count`, and `factorio_train_state_count{surface=…,state=…}`.
+Pollution-active enemy spawners are exported as
+`factorio_pollution_absorbing_nest_count{surface=…}`.

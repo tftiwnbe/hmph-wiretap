@@ -157,6 +157,9 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
         s = {"surface": sname}
         if "pollution" in surf:
             emit("pollution", s, surf["pollution"])
+        if "pollution_absorbing_nest_count" in surf:
+            emit("pollution_absorbing_nest_count", s,
+                 surf["pollution_absorbing_nest_count"])
         for source, total in _d(surf.get("pollution_produced_total")).items():
             emit("pollution_produced_total", {**s, "source": source}, total)
         for source, total in _d(surf.get("pollution_absorbed_total")).items():
