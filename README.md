@@ -338,5 +338,7 @@ the mod is disabled). Train telemetry is available as `factorio_train_count`,
 `factorio_train_moving_count`, `factorio_train_waiting_count`,
 `factorio_train_blocked_count`, `factorio_train_manual_count`,
 `factorio_train_stop_count`, and `factorio_train_state_count{surface=…,state=…}`.
+Trains in `destination_full` state count as waiting; `blocked` counts only
+trains in `no_path` state.
 Pollution-active enemy spawners are exported as
 `factorio_pollution_absorbing_nest_count{surface=…}`.

@@ -23,7 +23,7 @@
 --  * on_load may only read `storage`, so the export interval is mirrored
 --    into storage for timer re-registration on load.
 
-local MOD_VERSION = "1.3.4"
+local MOD_VERSION = "1.3.5"
 local SETTING_PREFIX = "wiretap-"
 local PRECISION = defines.flow_precision_index.five_seconds
 local ROBOT_ORDER_SAMPLE_INTERVAL_TICKS = 60 * 60
@@ -103,9 +103,9 @@ local function collect_trains(surface)
     out.by_state[state] = (out.by_state[state] or 0) + 1
     if math.abs(train.speed) > 0 then out.moving = out.moving + 1 end
     if train.manual_mode then out.manual = out.manual + 1 end
-    if state == "wait_signal" or state == "wait_station" then
+    if state == "wait_signal" or state == "wait_station" or state == "destination_full" then
       out.waiting = out.waiting + 1
-    elseif state == "no_path" or state == "destination_full" then
+    elseif state == "no_path" then
       out.blocked = out.blocked + 1
     end
   end
