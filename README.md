@@ -24,7 +24,7 @@ Two parts:
 
 | Part | What it does |
 | --- | --- |
-| [`mod/hmph-wiretap`](mod/hmph-wiretap/) | Factorio mod. Every N seconds it writes a JSON snapshot of the game's stats to `script-output/wiretap/stats.json` (and/or an append-only NDJSON journal). Also exposes a `wiretap` remote interface and `/wiretap` command for live RCON polling. It conflicts with the original `wiretap` package. |
+| [`mod/hmph-wiretap`](mod/hmph-wiretap/) | Factorio mod. Collects stats incrementally across ticks and writes completed JSON snapshots to `script-output/wiretap/stats.json` (and/or an append-only NDJSON journal), targeting an N-second interval. Also exposes a `wiretap` remote interface and `/wiretap` command for RCON polling. It conflicts with the original `wiretap` package. |
 | [`companion/wiretap_bridge.py`](companion/wiretap_bridge.py) | Python bridge (stdlib-only). Watches the JSON file and re-serves it as an HTTP API (`/stats`), Prometheus metrics (`/metrics`), and optionally MQTT with Home Assistant auto-discovery. |
 
 The mod can't talk to the network directly — Factorio's Lua sandbox only allows writing
@@ -69,7 +69,8 @@ contributors. Plus: game tick, play time, online player names.
 ```json
 {
   "meta": {"tick": 12345, "game_time_seconds": 205, "player_count": 1,
-            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.3.4",
+            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.3.6",
+            "collection_started_tick": 12200, "collection_duration_ticks": 145,
             "robot_order_sample_interval_seconds": 60, "robot_order_sample_age_seconds": 3},
   "surfaces": {
     "nauvis": {
@@ -153,8 +154,8 @@ then drop the zip into your mods folder:
 - Playing on Windows but running the bridge in WSL? The mods folder is at
   `/mnt/c/Users/<you>/AppData/Roaming/Factorio/mods/`.
 
-Enable **Hmph Wiretap** in the in-game Mods menu and load your save. Within one
-interval (default 10 s) the snapshot appears at:
+Enable **Hmph Wiretap** in the in-game Mods menu and load your save. Collection
+starts on the next tick; after the first cycle completes, the snapshot appears at:
 
 - Windows: `%APPDATA%\Factorio\script-output\wiretap\stats.json`
 - Linux: `~/.factorio/script-output/wiretap/stats.json`
@@ -178,12 +179,25 @@ Two quirks in the exported data are the game's own, passed through faithfully:
   bothers your dashboard.
 
 > **Multiplayer note:** "Write on server only" is on by default, so in multiplayer
-> only the host / dedicated server writes the file. The setting is ignored in
-> single player (the file is always written there).
+> only the host / dedicated server writes the file. All peers still run the same
+> incremental collection so saved state stays deterministic across multiplayer joins
+> and save/load. The setting is ignored in single player (the file is always written there).
 
-> **Performance note:** each export scans electric poles and accumulators on every
-> surface. At the default 10 s interval this is unnoticeable on normal bases; on a
-> megabase, raise the interval or disable the accumulator scan / per-entity breakdown.
+> **Performance note:** surface queries process at most 32 chunks and 256 matching
+> entities per tick. Power entity counts share a chunk pass instead of scanning the
+> entire surface separately for each entity name. Robot-order sampling visits at
+> most 256 robots per tick, and the other collectors run in separate phases.
+> Engine calls, network/force aggregation, JSON serialization, and writing still run
+> synchronously; these limits bound the spatial/robot scan work, not total tick time.
+
+The default 10-second interval is the target spacing between collection starts.
+Cycles never overlap: if collection takes longer, it finishes before the next cycle
+starts. Only complete snapshots are published. Values are sampled over the cycle,
+not all on one tick; `meta.tick` is its completion tick,
+`meta.collection_started_tick` is its start, and `meta.collection_duration_ticks`
+reports the sampling window. Large maps can therefore update less often than the
+configured interval. Pending work survives saves and multiplayer joins. Changing
+a Wiretap setting discards pending work and starts a fresh cycle.
 
 ## 2. Run the bridge
 
@@ -292,7 +306,7 @@ worlds. Platform names contain hyphens, so use bracket syntax for them:
 ### Option C: RCON (no file, no bridge)
 
 If your server has RCON enabled, poll the mod directly — the command prints the same
-JSON snapshot to the RCON client:
+completed JSON snapshot to the RCON client, without starting another scan:
 
 ```bash
 # any rcon client, e.g. `pip install factorio-rcon-py`
@@ -304,8 +318,15 @@ print(client.send_command('/wiretap'))
 ```
 
 Other mods can also call `remote.call("wiretap", "stats")` (table) or
-`remote.call("wiretap", "stats_json")` (string). `/wiretap write` forces an
-immediate file export.
+`remote.call("wiretap", "stats_json")` (string). Both return the latest completed
+snapshot. Until the first cycle completes (including after settings/configuration
+changes), reads report that collection is not ready; retry later.
+
+`/wiretap write` immediately exports the latest completed snapshot; it does not
+force synchronous collection. If none is ready, it reports that collection is
+pending and the first completed cycle will export automatically. The remote
+`write_now` call returns `true` when it writes, or `false` while awaiting that first
+snapshot.
 
 Heads-up for dedicated-server admins: typed into the server's *stdin console*, the
 full JSON dump of `/wiretap` is delivered to RCON callers only (short messages

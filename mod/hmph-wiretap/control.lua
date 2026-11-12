@@ -20,10 +20,11 @@
 --    electric_network_id. Surfaces with a global electric network (space
 --    platforms) instead expose surface.global_electric_network_statistics
 --    (2.0.48+), reported as network "global".
---  * on_load may only read `storage`, so the export interval is mirrored
---    into storage for timer re-registration on load.
+--  * Pending chunk iterators, scan cursors and results are stored in `storage`
+--    so save/load and multiplayer joins resume the same deterministic work.
 
-local MOD_VERSION = "1.3.5"
+local MOD_VERSION = "1.3.6"
+local surface_scan = require("scan")
 local SETTING_PREFIX = "wiretap-"
 local PRECISION = defines.flow_precision_index.five_seconds
 local ROBOT_ORDER_SAMPLE_INTERVAL_TICKS = 60 * 60
@@ -87,7 +88,7 @@ for name, state in pairs(defines.train_state) do
   train_state_names[state] = name
 end
 
-local function collect_trains(surface)
+local function collect_trains(surface, scan)
   local trains = game.train_manager.get_trains{surface = surface, force = "player"}
   local out = {
     total = #trains,
@@ -95,7 +96,7 @@ local function collect_trains(surface)
     waiting = 0,
     blocked = 0,
     manual = 0,
-    stop_count = surface.count_entities_filtered{type = "train-stop", force = "player"},
+    stop_count = scan.train_stop_count,
     by_state = {},
   }
   for _, train in pairs(trains) do
@@ -113,28 +114,19 @@ local function collect_trains(surface)
   return out
 end
 
-local function collect_defenses(surface)
-  local types = {"ammo-turret", "electric-turret", "fluid-turret", "artillery-turret", "wall", "gate"}
-  local entities = surface.find_entities_filtered{type = types, force = "player"}
-  local out = {entity_counts = {}, ammo_by_item = {}, loaded_turret_count = 0, empty_turret_count = 0}
-  for _, entity in pairs(entities) do
-    local kind = entity.type or "unknown"
-    out.entity_counts[entity.name] = (out.entity_counts[entity.name] or 0) + 1
-    if kind == "ammo-turret" then
-      local inventory = entity.get_inventory(defines.inventory.turret_ammo)
-      local loaded = inventory and not inventory.is_empty()
-      if loaded then
-        out.loaded_turret_count = out.loaded_turret_count + 1
-        for _, item in pairs(inventory.get_contents()) do
-          out.ammo_by_item[item.name] = (out.ammo_by_item[item.name] or 0) + item.count
-        end
-      else
-        out.empty_turret_count = out.empty_turret_count + 1
-      end
-    end
-  end
+local function collect_defenses(scan)
+  local out = scan.defense
   out.entity_counts = nonempty(out.entity_counts)
   out.ammo_by_item = nonempty(out.ammo_by_item)
+  return out
+end
+
+-- Copy cumulative counters before rounding/publishing. Published snapshots must
+-- not alias live storage that damage/death events continue to mutate.
+local function copy_counters(value)
+  if type(value) ~= "table" then return value end
+  local out = {}
+  for key, child in pairs(value) do out[key] = copy_counters(child) end
   return out
 end
 
@@ -156,7 +148,7 @@ end
 -- Power: one entry per electric network, plus per-surface totals.
 -- --------------------------------------------------------------------------
 
-local function collect_power(surface, include_breakdown, include_accumulators)
+local function collect_power(surface, include_breakdown, include_accumulators, scan)
   -- Surfaces with a global electric network (space platforms) expose
   -- statistics on the surface itself (2.0.48+), not on any entity —
   -- electric_network_statistics is readable on electric poles only. The
@@ -174,8 +166,8 @@ local function collect_power(surface, include_breakdown, include_accumulators)
     local ok_n, network = pcall(function() return surface.global_electric_network end)
     if ok_n and network then network_refs["global"] = network end
   else
-    for _, pole in pairs(surface.find_entities_filtered{type = "electric-pole"}) do
-      local id = pole.electric_network_id
+    for _, pole in pairs(scan.poles) do
+      local id = pole.valid and pole.electric_network_id
       if id and not reps[tostring(id)] then
         local key = tostring(id)
         reps[key] = pole.electric_network_statistics
@@ -187,7 +179,7 @@ local function collect_power(surface, include_breakdown, include_accumulators)
 
   local accumulators
   if include_accumulators then
-    accumulators = surface.find_entities_filtered{type = "accumulator"}
+    accumulators = scan.accumulators
   end
 
   local totals = {
@@ -264,11 +256,11 @@ local function collect_power(surface, include_breakdown, include_accumulators)
 
   if include_accumulators then
     for _, acc in pairs(accumulators) do
-      local charge = acc.energy
-      local capacity = acc.electric_buffer_size or 0
+      local charge = acc.charge
+      local capacity = acc.capacity
       totals.accumulator_charge_joules = totals.accumulator_charge_joules + charge
       totals.accumulator_capacity_joules = totals.accumulator_capacity_joules + capacity
-      local id = acc.electric_network_id
+      local id = acc.id
       if id then
         -- On a global-network surface all accumulators belong to the one
         -- global network; elsewhere, networks reachable only through
@@ -306,20 +298,12 @@ local function collect_power(surface, include_breakdown, include_accumulators)
 
   local out = {totals = totals, networks = nonempty(networks)}
 
-  -- Entity counts for the types seen in the power breakdown, so
-  -- watts-per-type can be turned into utilization per machine.
-  if seen_names and next(seen_names) ~= nil then
-    local counts = {}
-    for name in pairs(seen_names) do
-      local ok, n = pcall(function()
-        return surface.count_entities_filtered{name = name}
-      end)
-      if ok and n and n > 0 then counts[name] = n end
-    end
-    out.count_by_entity = nonempty(counts)
+  local names = {}
+  for name in pairs(seen_names or {}) do
+    -- Statistics may contain entries that are not current entity prototypes.
+    if prototypes.entity[name] then names[#names + 1] = name end
   end
-
-  return out
+  return out, names
 end
 
 -- --------------------------------------------------------------------------
@@ -371,49 +355,65 @@ local function collect_logistics(surface, quality_breakdown)
   return nonempty(out)
 end
 
-local function count_robot_orders(robots, kind, counts)
-  for _, robot in pairs(robots) do
-    if robot.valid then
-      local ok, queue = pcall(function() return robot.robot_order_queue end)
-      local order = ok and queue and queue[1]
-      local name = order and robot_order_name_by_value[order.type]
-      if name and robot_order_kind_by_name[name] == kind then
-        counts[kind][name] = counts[kind][name] + 1
+-- Robot queues are also sampled in bounded batches, never all in one tick.
+local function new_robot_sample(surface)
+  local sample = {tasks = {}, task_index = 1, by_force = {}}
+  for _, force in pairs(game.forces) do
+    local nets = force.logistic_networks[surface.name]
+    if nets and #nets > 0 then
+      local counts = {logistic = {}, construction = {}}
+      for name, kind in pairs(robot_order_kind_by_name) do counts[kind][name] = 0 end
+      sample.by_force[force.name] = counts
+      for _, net in pairs(nets) do
+        sample.tasks[#sample.tasks + 1] = {network = net, counts = counts}
       end
     end
   end
+  return sample
 end
 
-local function sample_robot_orders()
-  local by_surface = {}
-  for _, surface in pairs(game.surfaces) do
-    local by_force = {}
-    for _, force in pairs(game.forces) do
-      local nets = force.logistic_networks[surface.name]
-      if nets and #nets > 0 then
-        local counts = {logistic = {}, construction = {}}
-        for name, kind in pairs(robot_order_kind_by_name) do
-          counts[kind][name] = 0
+local function step_robot_sample(sample)
+  local visited, networks = 0, 0
+  while visited < 256 and networks < 16 do
+    local task = sample.tasks[sample.task_index]
+    if not task then return true end
+    if not task.network.valid then
+      sample.task_index = sample.task_index + 1
+      sample.robots, sample.robot_index, sample.kind = nil, nil, nil
+      networks = networks + 1
+    else
+      if not sample.robots then
+        sample.kind = sample.kind or "logistic"
+        sample.robots = sample.kind == "logistic" and task.network.logistic_robots
+            or task.network.construction_robots
+        sample.robot_index = 1
+      end
+      local robot = sample.robots[sample.robot_index]
+      if robot then
+        sample.robot_index = sample.robot_index + 1
+        visited = visited + 1
+        if robot.valid then
+          local ok, queue = pcall(function() return robot.robot_order_queue end)
+          local order = ok and queue and queue[1]
+          local name = order and robot_order_name_by_value[order.type]
+          if name and robot_order_kind_by_name[name] == sample.kind then
+            local counts = task.counts[sample.kind]
+            counts[name] = counts[name] + 1
+          end
         end
-        for _, net in pairs(nets) do
-          count_robot_orders(net.logistic_robots, "logistic", counts)
-          count_robot_orders(net.construction_robots, "construction", counts)
+      else
+        sample.robots, sample.robot_index = nil, nil
+        if sample.kind == "logistic" then
+          sample.kind = "construction"
+        else
+          sample.kind = nil
+          sample.task_index = sample.task_index + 1
+          networks = networks + 1
         end
-        by_force[force.name] = counts
       end
     end
-    if next(by_force) then by_surface[surface.name] = by_force end
   end
-  storage.robot_order_counts = by_surface
-  storage.robot_order_sample_tick = game.tick
-end
-
-local function refresh_robot_order_counts()
-  local last_sample = storage.robot_order_sample_tick
-  if not last_sample or game.tick < last_sample
-      or game.tick - last_sample >= ROBOT_ORDER_SAMPLE_INTERVAL_TICKS then
-    sample_robot_orders()
-  end
+  return false
 end
 
 -- --------------------------------------------------------------------------
@@ -545,105 +545,178 @@ end
 -- Snapshot assembly and export.
 -- --------------------------------------------------------------------------
 
-local function build_snapshot()
-  local include_logistics = cfg("logistics")
-  local quality_breakdown = cfg("quality-breakdown")
-  local include_power = cfg("power")
-  local power_breakdown = cfg("power-breakdown")
-  local include_accumulators = cfg("accumulators")
-  local include_production = cfg("production")
-  local include_science = cfg("science")
-  local include_pollution = cfg("pollution")
-  local include_trains = cfg("trains")
-
-  local players = {}
-  for _, player in pairs(game.connected_players) do
-    players[#players + 1] = player.name
-  end
-
-  if include_logistics then refresh_robot_order_counts() end
-
+-- Collection state belongs in storage: peers joining midway and save/load must
+-- resume exactly the same work. Never choose work by elapsed real time or skip
+-- collection on a client; either would make multiplayer storage diverge.
+local function begin_collection()
+  if storage.collection then return end
   local surfaces = {}
-  for _, surface in pairs(game.surfaces) do
-    local s = {
-      index = surface.index,
-      is_platform = surface.platform ~= nil,
-    }
-    if include_pollution then
-      s.pollution = surface.get_total_pollution()
-      local pstats = surface.pollution_statistics
-      s.pollution_produced_total = nonempty(pstats.input_counts)
-      s.pollution_absorbed_total = nonempty(pstats.output_counts)
-      local absorbing_nests = 0
-      for _, nest in pairs(surface.find_entities_filtered{type = "unit-spawner", force = "enemy"}) do
-        if nest.absorbed_pollution > 0 then
-          absorbing_nests = absorbing_nests + 1
-        end
-      end
-      s.pollution_absorbing_nest_count = absorbing_nests
-    end
-    if include_power then
-      s.power = collect_power(surface, power_breakdown, include_accumulators)
-    end
-    if include_logistics then
-      s.logistics = collect_logistics(surface, quality_breakdown)
-    end
-    if include_trains then
-      s.trains = collect_trains(surface)
-    end
-    if cfg("defense") then
-      s.defense = collect_defenses(surface)
-      local defense = storage.defense or {}
-      local key = surface.name
-      s.defense.damage_received = nonempty(defense.damage_received and defense.damage_received[key] or {})
-      s.defense.damage_events = nonempty(defense.damage_events and defense.damage_events[key] or {})
-      s.defense.enemy_kills = nonempty(defense.enemy_kills and defense.enemy_kills[key] or {})
-      s.defense.player_losses = nonempty(defense.player_losses and defense.player_losses[key] or {})
-    end
-    surfaces[surface.name] = s
-  end
+  for _, surface in pairs(game.surfaces) do surfaces[#surfaces + 1] = surface.index end
+  local last_sample = storage.robot_order_sample_tick
+  storage.collection = {
+    started_tick = game.tick, surface_indices = surfaces, surface_index = 1,
+    surfaces = {}, phase = "surface",
+    options = {
+      power = cfg("power"), breakdown = cfg("power-breakdown"),
+      accumulators = cfg("accumulators"), pollution = cfg("pollution"),
+      trains = cfg("trains"), defense = cfg("defense"),
+      logistics = cfg("logistics"), quality = cfg("quality-breakdown"),
+      production = cfg("production"), science = cfg("science"),
+    },
+    sample_robots = cfg("logistics") and (not last_sample or game.tick < last_sample
+        or game.tick - last_sample >= ROBOT_ORDER_SAMPLE_INTERVAL_TICKS),
+    robot_order_counts = {},
+  }
+  storage.next_collection_tick = game.tick + (storage.interval_ticks or 600)
+end
 
+local function build_snapshot()
+  if not storage.latest_snapshot then
+    error("[wiretap] first snapshot is still being collected; retry shortly")
+  end
+  return storage.latest_snapshot
+end
+
+local function do_export()
+  if not storage.latest_json then
+    begin_collection()
+    return false
+  end
+  local json = storage.latest_json
+  -- for_player only controls output. All peers run the same deterministic
+  -- collection, including in single player where for_player must be nil.
+  local target = (cfg("server-only") and game.is_multiplayer()) and 0 or nil
+  local mode = cfg("mode")
+  if mode == "snapshot" or mode == "both" then
+    helpers.write_file(cfg("filename"), json, false, target)
+  end
+  if mode == "journal" or mode == "both" then
+    helpers.write_file(cfg("journal-filename"), json .. "\n", true, target)
+  end
+  return true
+end
+
+local function finish_collection(job)
+  if job.sample_robots then
+    storage.robot_order_counts = job.robot_order_counts
+    storage.robot_order_sample_tick = game.tick
+  end
+  local players = {}
+  for _, player in pairs(game.connected_players) do players[#players + 1] = player.name end
   local snapshot = {
     meta = {
-      mod_version = MOD_VERSION,
-      tick = game.tick,
-      ticks_played = game.ticks_played,
-      game_time_seconds = math.floor(game.tick / 60),
-      player_count = #game.connected_players,
-      players_online = nonempty(players),
-      interval_seconds = cfg("interval-seconds"),
+      mod_version = MOD_VERSION, tick = game.tick, ticks_played = game.ticks_played,
+      game_time_seconds = math.floor(game.tick / 60), player_count = #game.connected_players,
+      players_online = nonempty(players), interval_seconds = cfg("interval-seconds"),
+      collection_started_tick = job.started_tick,
+      collection_duration_ticks = game.tick - job.started_tick,
       robot_order_sample_interval_seconds = ROBOT_ORDER_SAMPLE_INTERVAL_TICKS / 60,
       robot_order_sample_age_seconds = storage.robot_order_sample_tick
           and math.floor((game.tick - storage.robot_order_sample_tick) / 60) or nil,
     },
-    surfaces = surfaces,
-    forces = collect_forces(include_production, include_science),
+    surfaces = job.surfaces,
+    forces = collect_forces(job.options.production, job.options.science),
   }
-
   local decimals = cfg("decimals")
-  if decimals and decimals >= 0 and decimals <= 12 then
-    round_floats(snapshot, 10 ^ decimals)
-  end
-  return snapshot
+  if decimals and decimals >= 0 and decimals <= 12 then round_floats(snapshot, 10 ^ decimals) end
+  local json = helpers.table_to_json(snapshot)
+  -- Publish only complete snapshots; RCON reads reuse these rather than rescanning.
+  storage.latest_snapshot, storage.latest_json = snapshot, json
+  storage.collection = nil
+  do_export()
 end
 
-local function do_export()
-  local ok, err = pcall(function()
-    local json = helpers.table_to_json(build_snapshot())
-    -- for_player = 0 restricts the write to the server's output "if present";
-    -- in single player there is no server, so the write is silently skipped.
-    -- Only honor the setting in actual multiplayer.
-    local target = (cfg("server-only") and game.is_multiplayer()) and 0 or nil
-    local mode = cfg("mode")
-    if mode == "snapshot" or mode == "both" then
-      helpers.write_file(cfg("filename"), json, false, target)
+local function step_collection()
+  local job = storage.collection
+  if not job then
+    if game.tick >= (storage.next_collection_tick or 0) then begin_collection() end
+    return
+  end
+  local options = job.options
+  if job.phase == "surface" then
+    local index = job.surface_indices[job.surface_index]
+    if not index then finish_collection(job); return end
+    local surface = game.surfaces[index]
+    if surface and surface.valid then
+      job.scan = surface_scan.new(surface, options)
+      job.current = {index = surface.index, is_platform = surface.platform ~= nil}
+      job.phase = "scan"
+    else
+      job.surface_index = job.surface_index + 1
     end
-    if mode == "journal" or mode == "both" then
-      helpers.write_file(cfg("journal-filename"), json .. "\n", true, target)
+    return
+  end
+  local scan = job.scan
+  if not scan.surface.valid then
+    job.surfaces[scan.name] = nil
+    job.scan, job.current, job.robot_sample = nil, nil, nil
+    job.surface_index = job.surface_index + 1
+    job.phase = "surface"
+    return
+  end
+  local surface, current = scan.surface, job.current
+  if job.phase == "scan" then
+    if surface_scan.step(scan) then job.phase = "power" end
+  elseif job.phase == "power" then
+    local names = {}
+    if options.power then
+      current.power, names = collect_power(surface, options.breakdown, options.accumulators, scan)
     end
-  end)
+    surface_scan.count_power_entities(scan, names)
+    job.phase = "counts"
+  elseif job.phase == "counts" then
+    if #scan.names == 0 or surface_scan.step(scan) then
+      if current.power then current.power.count_by_entity = nonempty(scan.entity_counts) end
+      job.phase = "robots"
+    end
+  elseif job.phase == "robots" then
+    if job.sample_robots then
+      job.robot_sample = job.robot_sample or new_robot_sample(surface)
+      if not step_robot_sample(job.robot_sample) then return end
+    end
+    job.phase = "logistics"
+  elseif job.phase == "logistics" then
+    if options.logistics then
+      current.logistics = collect_logistics(surface, options.quality)
+      if job.sample_robots and current.logistics then
+        for name, entry in pairs(current.logistics) do
+          entry.robot_orders = job.robot_sample.by_force[name] or {}
+        end
+      end
+    end
+    job.phase = "details"
+  elseif job.phase == "details" then
+    if options.pollution then
+      current.pollution = scan.pollution
+      local pstats = surface.pollution_statistics
+      current.pollution_produced_total = nonempty(pstats.input_counts)
+      current.pollution_absorbed_total = nonempty(pstats.output_counts)
+      current.pollution_absorbing_nest_count = scan.absorbing_nests
+    end
+    if options.trains then current.trains = collect_trains(surface, scan) end
+    if options.defense then
+      current.defense = collect_defenses(scan)
+      for _, key in ipairs({"damage_received", "damage_events", "enemy_kills", "player_losses"}) do
+        local counters = (storage.defense or {})[key]
+        current.defense[key] = counters and counters[surface.name]
+            and nonempty(copy_counters(counters[surface.name])) or nil
+      end
+    end
+    -- Read the current name: a surface may have been renamed while scanning.
+    if job.sample_robots then job.robot_order_counts[surface.name] = job.robot_sample.by_force end
+    job.surfaces[surface.name] = current
+    job.scan, job.current, job.robot_sample = nil, nil, nil
+    job.surface_index = job.surface_index + 1
+    job.phase = "surface"
+  end
+end
+
+local function on_tick()
+  local ok, err = pcall(step_collection)
   if not ok then
-    log("[wiretap] export failed: " .. tostring(err))
+    storage.collection = nil
+    storage.next_collection_tick = game.tick + (storage.interval_ticks or 600)
+    log("[wiretap] collection failed: " .. tostring(err))
   end
 end
 
@@ -699,56 +772,57 @@ script.on_event(defines.events.on_entity_died, function(event)
 end, {{filter = "force", force = "player"}, {filter = "force", force = "enemy"}})
 
 -- --------------------------------------------------------------------------
--- Timer wiring. on_load may only read `storage`, so the interval is
--- mirrored there whenever it can be read from settings (game context).
+-- Timer wiring. The on_tick handler is unconditional on every peer; only
+-- serializable work is kept between ticks, so on_load needs no mutations.
 -- --------------------------------------------------------------------------
 
 local function refresh_interval()
   storage.interval_ticks = math.max(1, cfg("interval-seconds")) * 60
+  storage.collection = nil
+  storage.next_collection_tick = game.tick + 1
 end
 
-local function register_timer()
-  script.on_nth_tick(nil)
-  script.on_nth_tick(storage.interval_ticks or 600, do_export)
-end
+script.on_event(defines.events.on_tick, on_tick)
 
 script.on_init(function()
   ensure_defense_storage()
   refresh_interval()
-  register_timer()
 end)
-
-script.on_load(register_timer)
 
 script.on_configuration_changed(function()
   ensure_defense_storage()
+  -- Published snapshots from an earlier schema/settings must not be reused.
+  storage.latest_snapshot, storage.latest_json = nil, nil
+  storage.robot_order_sample_tick = nil
   refresh_interval()
-  register_timer()
 end)
 
 script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
   if event.setting and event.setting:sub(1, #SETTING_PREFIX) == SETTING_PREFIX then
+    storage.latest_snapshot, storage.latest_json = nil, nil
     refresh_interval()
-    register_timer()
   end
 end)
 
 -- --------------------------------------------------------------------------
 -- Live access: remote interface (for other mods / RCON) and a command.
 --   RCON:  /wiretap        -> prints the JSON snapshot to the caller
---          /wiretap write  -> forces a file export now
+--          /wiretap write  -> writes the latest completed snapshot
 -- --------------------------------------------------------------------------
 
 remote.add_interface("wiretap", {
   stats = build_snapshot,
-  stats_json = function() return helpers.table_to_json(build_snapshot()) end,
+  stats_json = function()
+    build_snapshot()
+    return storage.latest_json
+  end,
   write_now = do_export,
   version = function() return MOD_VERSION end,
 })
 
 commands.add_command(
   "wiretap",
-  "Print current stats as JSON; '/wiretap write' forces a file export.",
+  "Print the latest completed stats; '/wiretap write' exports that snapshot.",
   function(cmd)
     local function reply(text)
       if cmd.player_index then
@@ -765,7 +839,10 @@ commands.add_command(
     end
     local ok, err = pcall(function()
       if cmd.parameter == "write" then
-        do_export()
+        if not do_export() then
+          reply("[wiretap] first snapshot is being collected; export will follow automatically")
+          return
+        end
         local mode = cfg("mode")
         local written = {}
         if mode == "snapshot" or mode == "both" then
@@ -776,7 +853,8 @@ commands.add_command(
         end
         reply("[wiretap] wrote " .. table.concat(written, " and "))
       else
-        reply(helpers.table_to_json(build_snapshot()))
+        build_snapshot()
+        reply(storage.latest_json)
       end
     end)
     if not ok then

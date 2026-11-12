@@ -1,4 +1,18 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.6
+Date: 2026-11-12
+  Optimisations:
+    - Spreads surface scanning across ticks, with fixed chunk and entity work limits.
+    - Counts power-breakdown entities together per chunk instead of repeating full-surface scans.
+    - Batches robot-order sampling and separates collection phases to reduce periodic UPS hitches.
+    - Serves RCON and remote reads from the latest complete snapshot without rescanning the map.
+  Changes:
+    - Adds collection start/duration metadata; values are sampled across a cycle, with no overlapping cycles.
+    - Saves in-progress work so save/load and multiplayer joins resume deterministic collection.
+    - Explicit writes export the latest complete snapshot; reads report pending until the first is ready.
+  Bugfixes:
+    - Copies combat counters before rounding/export so published snapshots cannot mutate live counters.
+---------------------------------------------------------------------------------------------------
 Version: 1.3.5
 Date: 2026-11-04
   Bugfixes:
