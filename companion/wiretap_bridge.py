@@ -152,6 +152,10 @@ def render_metrics(snapshot: dict | None, updated_at: float | None) -> str:
     emit("game_tick", {}, meta.get("tick", 0))
     emit("game_time_seconds", {}, meta.get("game_time_seconds", 0))
     emit("players_online", {}, meta.get("player_count", 0))
+    # Available from mod 1.3.6; older snapshots keep their existing metrics.
+    for key in ("collection_started_tick", "collection_duration_ticks", "interval_seconds"):
+        if key in meta:
+            emit(key, {}, meta[key])
 
     for sname, surf in _d(snapshot.get("surfaces")).items():
         s = {"surface": sname}

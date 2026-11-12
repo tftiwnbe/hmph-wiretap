@@ -69,7 +69,7 @@ contributors. Plus: game tick, play time, online player names.
 ```json
 {
   "meta": {"tick": 12345, "game_time_seconds": 205, "player_count": 1,
-            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.3.6",
+            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.3.7",
             "collection_started_tick": 12200, "collection_duration_ticks": 145,
             "robot_order_sample_interval_seconds": 60, "robot_order_sample_age_seconds": 3},
   "surfaces": {
@@ -186,7 +186,8 @@ Two quirks in the exported data are the game's own, passed through faithfully:
 > **Performance note:** surface queries process at most 32 chunks and 256 matching
 > entities per tick. Power entity counts share a chunk pass instead of scanning the
 > entire surface separately for each entity name. Robot-order sampling visits at
-> most 256 robots per tick, and the other collectors run in separate phases.
+> most 256 robots per tick. Logistics aggregation visits at most 256 item/roboport
+> records and starts at most four networks per tick. The other collectors run in separate phases.
 > Engine calls, network/force aggregation, JSON serialization, and writing still run
 > synchronously; these limits bound the spatial/robot scan work, not total tick time.
 
@@ -198,6 +199,10 @@ not all on one tick; `meta.tick` is its completion tick,
 reports the sampling window. Large maps can therefore update less often than the
 configured interval. Pending work survives saves and multiplayer joins. Changing
 a Wiretap setting discards pending work and starts a fresh cycle.
+
+Damage callbacks reuse counter tables and the cached defense setting. Zero-damage
+hits (for example, fire against immune walls) still count as events, with zero
+damage, so existing combat metrics retain their meaning.
 
 ## 2. Run the bridge
 
@@ -363,3 +368,10 @@ Trains in `destination_full` state count as waiting; `blocked` counts only
 trains in `no_path` state.
 Pollution-active enemy spawners are exported as
 `factorio_pollution_absorbing_nest_count{surface=…}`.
+
+Collection health is available as `factorio_collection_duration_ticks`,
+`factorio_collection_started_tick`, and `factorio_interval_seconds`. Compare
+`factorio_collection_duration_ticks / 60` with `factorio_interval_seconds` to see
+whether collection takes longer than the target interval. Duration is in simulation
+ticks, not measured CPU time or wall-clock seconds. These gauges require the updated
+bridge; start/duration are omitted for snapshots from mods older than 1.3.6.

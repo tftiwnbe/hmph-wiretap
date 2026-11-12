@@ -1,4 +1,15 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.7
+Date: 2026-11-12
+  Optimisations:
+    - Batches logistics contents and roboport aggregation across ticks with fixed work limits.
+    - Reuses combat counter tables and caches the defense setting instead of allocating key arrays
+      and repeating initialization/settings lookups on each damage event.
+    - Looks up the attacker's cause only when the event does not already identify its force.
+  Changes:
+    - Preserves zero-damage hit events and their zero-damage counters.
+    - Exposes collection start, duration, and configured interval as Prometheus gauges in the bridge.
+---------------------------------------------------------------------------------------------------
 Version: 1.3.6
 Date: 2026-11-12
   Optimisations:

@@ -23,8 +23,9 @@
 --  * Pending chunk iterators, scan cursors and results are stored in `storage`
 --    so save/load and multiplayer joins resume the same deterministic work.
 
-local MOD_VERSION = "1.3.6"
+local MOD_VERSION = "1.3.7"
 local surface_scan = require("scan")
+local logistics = require("logistics")
 local SETTING_PREFIX = "wiretap-"
 local PRECISION = defines.flow_precision_index.five_seconds
 local ROBOT_ORDER_SAMPLE_INTERVAL_TICKS = 60 * 60
@@ -55,17 +56,16 @@ local function nonempty(t)
   return t
 end
 
--- Bounded aggregate helpers for combat telemetry. These maps contain entity,
--- damage-type, force, and surface names only (never positions or unit numbers).
-local function nested_add(root, keys, amount)
-  local node = root
-  for i = 1, #keys - 1 do
-    local key = keys[i]
-    node[key] = node[key] or {}
-    node = node[key]
-  end
-  local key = keys[#keys]
-  node[key] = (node[key] or 0) + amount
+-- Counter dimensions stay bounded to names. Reuse their existing leaf tables
+-- without allocating an array of keys for every damage/death callback.
+local function counter_leaf(root, surface, entity, damage_type)
+  local by_entity = root[surface]
+  if not by_entity then by_entity = {}; root[surface] = by_entity end
+  local by_damage = by_entity[entity]
+  if not by_damage then by_damage = {}; by_entity[entity] = by_damage end
+  local by_attacker = by_damage[damage_type]
+  if not by_attacker then by_attacker = {}; by_damage[damage_type] = by_attacker end
+  return by_attacker
 end
 
 local function valid_name(obj, fallback)
@@ -73,6 +73,13 @@ local function valid_name(obj, fallback)
   local ok, name = pcall(function() return obj.name end)
   if ok and name then return name end
   return fallback
+end
+
+local function attacker_name(event)
+  local name = valid_name(event.force)
+  if name then return name end
+  local cause = event.cause
+  return valid_name(cause and cause.valid and cause.force, "environment")
 end
 
 local function ensure_defense_storage()
@@ -304,55 +311,6 @@ local function collect_power(surface, include_breakdown, include_accumulators, s
     if prototypes.entity[name] then names[#names + 1] = name end
   end
   return out, names
-end
-
--- --------------------------------------------------------------------------
--- Logistics: aggregated item and robot counts per force, per surface.
--- --------------------------------------------------------------------------
-
-local function collect_logistics(surface, quality_breakdown)
-  local out = {}
-  local cached_orders_by_force = (storage.robot_order_counts or {})[surface.name] or {}
-  for _, force in pairs(game.forces) do
-    local nets = force.logistic_networks[surface.name]
-    if nets and #nets > 0 then
-      local items, by_quality = {}, {}
-      local robots = {
-        logistic_total = 0,
-        logistic_available = 0,
-        construction_total = 0,
-        construction_available = 0,
-        waiting_for_charge = 0,
-      }
-      for _, net in pairs(nets) do
-        for _, entry in pairs(net.get_contents()) do
-          items[entry.name] = (items[entry.name] or 0) + entry.count
-          if quality_breakdown then
-            local key = entry.name .. ":" .. (entry.quality or "normal")
-            by_quality[key] = (by_quality[key] or 0) + entry.count
-          end
-        end
-        robots.logistic_total = robots.logistic_total + net.all_logistic_robots
-        robots.logistic_available = robots.logistic_available + net.available_logistic_robots
-        robots.construction_total = robots.construction_total + net.all_construction_robots
-        robots.construction_available = robots.construction_available + net.available_construction_robots
-        for _, cell in pairs(net.cells) do
-          robots.waiting_for_charge = robots.waiting_for_charge + cell.to_charge_robot_count
-        end
-      end
-      local entry = {
-        network_count = #nets,
-        robots = robots,
-        robot_orders = cached_orders_by_force[force.name] or {},
-        items = nonempty(items),
-      }
-      if quality_breakdown then
-        entry.items_by_quality = nonempty(by_quality)
-      end
-      out[force.name] = entry
-    end
-  end
-  return nonempty(out)
 end
 
 -- Robot queues are also sampled in bounded batches, never all in one tick.
@@ -649,7 +607,7 @@ local function step_collection()
   local scan = job.scan
   if not scan.surface.valid then
     job.surfaces[scan.name] = nil
-    job.scan, job.current, job.robot_sample = nil, nil, nil
+    job.scan, job.current, job.robot_sample, job.logistics = nil, nil, nil, nil
     job.surface_index = job.surface_index + 1
     job.phase = "surface"
     return
@@ -677,12 +635,11 @@ local function step_collection()
     job.phase = "logistics"
   elseif job.phase == "logistics" then
     if options.logistics then
-      current.logistics = collect_logistics(surface, options.quality)
-      if job.sample_robots and current.logistics then
-        for name, entry in pairs(current.logistics) do
-          entry.robot_orders = job.robot_sample.by_force[name] or {}
-        end
-      end
+      local orders = job.sample_robots and job.robot_sample.by_force
+          or (storage.robot_order_counts or {})[surface.name] or {}
+      job.logistics = job.logistics or logistics.new(surface, options.quality, orders)
+      if not logistics.step(job.logistics) then return end
+      current.logistics = nonempty(job.logistics.out)
     end
     job.phase = "details"
   elseif job.phase == "details" then
@@ -705,7 +662,7 @@ local function step_collection()
     -- Read the current name: a surface may have been renamed while scanning.
     if job.sample_robots then job.robot_order_counts[surface.name] = job.robot_sample.by_force end
     job.surfaces[surface.name] = current
-    job.scan, job.current, job.robot_sample = nil, nil, nil
+    job.scan, job.current, job.robot_sample, job.logistics = nil, nil, nil, nil
     job.surface_index = job.surface_index + 1
     job.phase = "surface"
   end
@@ -727,17 +684,19 @@ end
 -- --------------------------------------------------------------------------
 
 script.on_event(defines.events.on_entity_damaged, function(event)
-  if not cfg("defense") then return end
+  if not storage.defense_enabled then return end
   local entity = event.entity
   if not (entity and entity.valid and entity.force and entity.force.name == "player") then return end
-  ensure_defense_storage()
   local surface = entity.surface.name
   local entity_name = entity.name or "unknown"
   local damage_type = valid_name(event.damage_type, "unknown")
-  local attacker_force = valid_name(event.force, valid_name(event.cause and event.cause.force, "environment"))
-  local keys = {surface, entity_name, damage_type, attacker_force}
-  nested_add(storage.defense.damage_received, keys, event.final_damage_amount or 0)
-  nested_add(storage.defense.damage_events, keys, 1)
+  local attacker_force = attacker_name(event)
+  local received = counter_leaf(storage.defense.damage_received, surface, entity_name, damage_type)
+  local events = counter_leaf(storage.defense.damage_events, surface, entity_name, damage_type)
+  received[attacker_force] = (received[attacker_force] or 0) + (event.final_damage_amount or 0)
+  -- Immune structures still receive hit events. Keep those counts (and zero
+  -- damage series) rather than changing telemetry to suppress fire callbacks.
+  events[attacker_force] = (events[attacker_force] or 0) + 1
 end, {
   {filter = "turret"},
   {filter = "wall-connectable"},
@@ -755,19 +714,20 @@ end, {
 })
 
 script.on_event(defines.events.on_entity_died, function(event)
-  if not cfg("defense") then return end
+  if not storage.defense_enabled then return end
   local entity = event.entity
   if not (entity and entity.valid and entity.force) then return end
-  ensure_defense_storage()
   local force_name = entity.force.name
   local surface = entity.surface.name
   local entity_name = entity.name or "unknown"
   local damage_type = valid_name(event.damage_type, "unknown")
-  local attacker_force = valid_name(event.force, valid_name(event.cause and event.cause.force, "environment"))
+  local attacker_force = attacker_name(event)
   if force_name == "enemy" then
-    nested_add(storage.defense.enemy_kills, {surface, entity_name, damage_type, attacker_force}, 1)
+    local kills = counter_leaf(storage.defense.enemy_kills, surface, entity_name, damage_type)
+    kills[attacker_force] = (kills[attacker_force] or 0) + 1
   elseif force_name == "player" then
-    nested_add(storage.defense.player_losses, {surface, entity_name, damage_type, attacker_force}, 1)
+    local losses = counter_leaf(storage.defense.player_losses, surface, entity_name, damage_type)
+    losses[attacker_force] = (losses[attacker_force] or 0) + 1
   end
 end, {{filter = "force", force = "player"}, {filter = "force", force = "enemy"}})
 
@@ -778,6 +738,7 @@ end, {{filter = "force", force = "player"}, {filter = "force", force = "enemy"}}
 
 local function refresh_interval()
   storage.interval_ticks = math.max(1, cfg("interval-seconds")) * 60
+  storage.defense_enabled = cfg("defense")
   storage.collection = nil
   storage.next_collection_tick = game.tick + 1
 end
