@@ -69,7 +69,7 @@ contributors. Plus: game tick, play time, online player names.
 ```json
 {
   "meta": {"tick": 12345, "game_time_seconds": 205, "player_count": 1,
-            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.3.7",
+            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.3.8",
             "collection_started_tick": 12200, "collection_duration_ticks": 145,
             "robot_order_sample_interval_seconds": 60, "robot_order_sample_age_seconds": 3},
   "surfaces": {
@@ -187,9 +187,13 @@ Two quirks in the exported data are the game's own, passed through faithfully:
 > entities per tick. Power entity counts share a chunk pass instead of scanning the
 > entire surface separately for each entity name. Robot-order sampling visits at
 > most 256 robots per tick. Logistics aggregation visits at most 256 item/roboport
-> records and starts at most four networks per tick. The other collectors run in separate phases.
-> Engine calls, network/force aggregation, JSON serialization, and writing still run
-> synchronously; these limits bound the spatial/robot scan work, not total tick time.
+> records and starts at most four networks per tick. Power flow collection makes at
+> most 64 flow calls per tick. Research and science-key traversal visit at most 128
+> records per tick, science rates process at most 16 packs (64 flow calls), train
+> state sampling visits at most 128 trains, and rounding takes at most 256 traversal
+> steps. Each collector runs in its own phase, followed by separate serialization
+> and publication ticks. Native list/statistics reads, JSON conversion, and each
+> file write remain synchronous; work limits do not guarantee a wall-clock tick budget.
 
 The default 10-second interval is the target spacing between collection starts.
 Cycles never overlap: if collection takes longer, it finishes before the next cycle
@@ -203,6 +207,18 @@ a Wiretap setting discards pending work and starts a fresh cycle.
 Damage callbacks reuse counter tables and the cached defense setting. Zero-damage
 hits (for example, fire against immune walls) still count as events, with zero
 damage, so existing combat metrics retain their meaning.
+
+Science and production reuse the same item-total copies per force/surface.
+Technology names are indexed once on initialization or mod configuration changes.
+These reduce repeated work in addition to spreading collection across ticks.
+
+The jobs are cooperative, not background threads. Factorio does not expose
+`coroutine`, `io`, or `os` in its Lua sandbox, and multiplayer collection must
+remain deterministic. Cursors and LuaObjects are kept in `storage`; work is
+chosen by fixed record limits rather than a machine's elapsed milliseconds.
+Formatting Prometheus/MQTT/HTTP output remains in the external companion process.
+See [Factorio's Lua library restrictions](https://lua-api.factorio.com/latest/auxiliary/libraries.html)
+and [saveable storage types](https://lua-api.factorio.com/latest/auxiliary/storage.html).
 
 ## 2. Run the bridge
 

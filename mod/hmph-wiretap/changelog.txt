@@ -1,4 +1,16 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.8
+Date: 2026-11-12
+  Optimisations:
+    - Converts power statistics, research, science, production, evolution, and train collection
+      into saved cooperative jobs instead of combining all their work in one tick.
+    - Caps power flow queries at 64 per tick and science rate queries at 16 packs per tick.
+    - Indexes technology names once per mod configuration and reuses item-total copies for science
+      and production, avoiding repeated statistics reads.
+    - Rounds snapshot values in bounded batches and separates JSON conversion from file publication.
+  Changes:
+    - Keeps existing metric fields and documents cooperative scheduling and remaining native-call limits.
+---------------------------------------------------------------------------------------------------
 Version: 1.3.7
 Date: 2026-11-12
   Optimisations:
