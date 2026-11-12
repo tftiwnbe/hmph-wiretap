@@ -23,7 +23,7 @@
 --  * Pending chunk iterators, scan cursors and results are stored in `storage`
 --    so save/load and multiplayer joins resume the same deterministic work.
 
-local MOD_VERSION = "1.3.8"
+local MOD_VERSION = "1.3.9"
 local surface_scan = require("scan")
 local logistics = require("logistics")
 local power = require("power")

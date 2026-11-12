@@ -69,7 +69,7 @@ contributors. Plus: game tick, play time, online player names.
 ```json
 {
   "meta": {"tick": 12345, "game_time_seconds": 205, "player_count": 1,
-            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.3.8",
+            "players_online": ["kraus"], "interval_seconds": 10, "mod_version": "1.3.9",
             "collection_started_tick": 12200, "collection_duration_ticks": 145,
             "robot_order_sample_interval_seconds": 60, "robot_order_sample_age_seconds": 3},
   "surfaces": {

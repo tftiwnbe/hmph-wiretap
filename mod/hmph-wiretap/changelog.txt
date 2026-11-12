@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.9
+Date: 2026-11-12
+  Changes:
+    - Republishes the 1.3.8 collector improvements after older concurrent uploads became newest.
+    - Serializes release workflows and skips stale or already-published Mod Portal uploads.
+    - Fixes Forgejo release retries to identify existing ZIP assets by ID.
+---------------------------------------------------------------------------------------------------
 Version: 1.3.8
 Date: 2026-11-12
   Optimisations:

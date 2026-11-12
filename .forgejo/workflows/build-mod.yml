@@ -6,6 +6,12 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+# Tag-specific groups would still allow different versions to race. Queue the
+# whole release workflow together; the publish guard also checks numeric order.
+concurrency:
+  group: hmph-wiretap-releases
+  cancel-in-progress: false
+
 jobs:
   package:
     runs-on: ubuntu-latest
@@ -45,7 +51,12 @@ jobs:
           version="$(python3 -c "import json; print(json.load(open('mod/hmph-wiretap/info.json'))['version'])")"
           test "${GITHUB_REF_NAME}" = "v${version}"
 
+      - name: Check Mod Portal release order
+        id: portal
+        run: python3 scripts/check-mod-portal-release.py "$GITHUB_OUTPUT"
+
       - name: Upload release to Factorio Mod Portal
+        if: steps.portal.outputs.publish == 'true'
         env:
           FACTORIO_MOD_UPLOAD_API_KEY: ${{ secrets.FACTORIO_MOD_UPLOAD_API_KEY }}
         run: |
@@ -99,10 +110,11 @@ jobs:
             exit 1
           fi
           upload_url="$(printf '%s' "$release" | python3 -c 'import json, sys; print(json.load(sys.stdin)["upload_url"].split("{")[0])')"
-          existing_asset_url="$(printf '%s' "$release" | python3 -c 'import json, sys; print(next((a["url"] for a in json.load(sys.stdin).get("assets", []) if a["name"] == sys.argv[1]), ""))' "hmph-wiretap_${version}.zip")"
-          if [ -n "$existing_asset_url" ]; then
+          release_id="$(printf '%s' "$release" | python3 -c 'import json, sys; print(int(json.load(sys.stdin)["id"]))')"
+          existing_asset_id="$(printf '%s' "$release" | python3 -c 'import json, sys; print(next((int(a["id"]) for a in json.load(sys.stdin).get("assets", []) if a["name"] == sys.argv[1]), ""))' "hmph-wiretap_${version}.zip")"
+          if [ -n "$existing_asset_id" ]; then
             curl --fail-with-body --silent --show-error \
-              --request DELETE "$existing_asset_url" \
+              --request DELETE "${api}/releases/${release_id}/assets/${existing_asset_id}" \
               --header "Authorization: token ${FORGEJO_TOKEN}"
           fi
           curl --fail-with-body --silent --show-error \
